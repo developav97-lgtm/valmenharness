@@ -356,8 +356,9 @@ Comandos:
   journey clear-stop --project <id> --id <ticket> --actor <nombre>
                             Libera la parada de un ticket: una parada no se reintenta sola.
   journey worktree create|integrate|remove --id <ID> [--retirar]
-                            Crea, integra a main o quita el worktree .claude/worktrees/ticket-<slug>
+                            Crea, integra a la rama base o quita el worktree .claude/worktrees/ticket-<slug>
                             (rama valmen/ticket-<slug>) del ticket, solo desde el checkout principal.
+                            La rama base es execution.base-branch de .valmen/config.yaml (main si falta).
                             integrate --retirar: tras integrar (o si no había nada), lo quita como remove.
   journey install-trigger --project <id>
                             RETIRADO: ya no hay disparador periódico. Responde con el aviso, sale

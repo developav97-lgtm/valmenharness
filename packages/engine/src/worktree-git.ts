@@ -53,8 +53,15 @@ export function nombresDeWorktree(ticketId: string): NombresDeWorktree {
   });
 }
 
-/** Por qué una invocación de git no se admite en los worktrees, o `null` si se admite. */
-export function motivoDeGitDeWorktree(argumentos: readonly string[]): string | null {
+/**
+ * Por qué una invocación de git no se admite en los worktrees, o `null` si se admite.
+ *
+ * `worktree add` solo parte de `ramaBase`, la rama base del proyecto (`main` si no se pasa).
+ */
+export function motivoDeGitDeWorktree(
+  argumentos: readonly string[],
+  ramaBase = "main",
+): string | null {
   const [operacion, ...resto] = argumentos;
   if (operacion === undefined) return "No se indicó ninguna operación de git.";
   const prohibida = resto.find((a) => BANDERAS_DE_FUERZA.includes(a));
@@ -103,12 +110,12 @@ export function motivoDeGitDeWorktree(argumentos: readonly string[]): string | n
         resto[1] === "-b" &&
         RAMA_DE_TICKET.test(resto[2]!) &&
         esCarpetaDeTicket(resto[3]!) &&
-        resto[4] === "main"
+        resto[4] === ramaBase
       )
         return null;
       if (resto.length === 2 && resto[0] === "remove" && esCarpetaDeTicket(resto[1]!))
         return null;
-      return "git worktree solo se admite como `list --porcelain`, `add -b <rama> <carpeta> main` o `remove <carpeta>` (sin --force).";
+      return `git worktree solo se admite como \`list --porcelain\`, \`add -b <rama> <carpeta> ${ramaBase}\` o \`remove <carpeta>\` (sin --force).`;
     default:
       return `La operación git ${operacion} no está permitida en los worktrees (solo status, rev-parse, cat-file, merge-base, branch, worktree).`;
   }
@@ -132,8 +139,9 @@ export function ejecutarGitDeWorktree(
   root: string,
   argumentos: readonly string[],
   ejecutor: EjecutorDeGit = ejecutarGitDeVerdad,
+  ramaBase?: string,
 ): { readonly status: number; readonly stdout: string; readonly stderr: string } {
-  const motivo = motivoDeGitDeWorktree(argumentos);
+  const motivo = motivoDeGitDeWorktree(argumentos, ramaBase);
   if (motivo !== null) fail(motivo, EXIT_INVARIANT);
   return ejecutor(argumentos, root);
 }

@@ -32,7 +32,7 @@ type Subcomando = (
 
 function textoDeRetiro(r: ReturnType<typeof quitarWorktree>): string {
   return [
-    `Worktree quitado: ${r.carpeta} y rama ${r.rama} borrada (ya estaba integrada en main).`,
+    `Worktree quitado: ${r.carpeta} y rama ${r.rama} borrada (ya estaba integrada en ${r.ramaBase}).`,
     `Cupo de la máquina: ${r.reserva === "liberada" ? "liberado" : "nada que liberar"}.`,
     ...r.avisos.map((a) => `Aviso: ${a}`),
   ].join("\n");
@@ -50,7 +50,7 @@ export const SUBCOMANDOS_DE_WORKTREE: Readonly<Record<string, Subcomando>> = Obj
   create: (paths, ticketId, opciones) => {
     const r = crearWorktree(motor(paths, ticketId, opciones));
     return [
-      `Worktree creado: ${r.carpeta} (rama ${r.rama}, desde main en ${r.commit.slice(0, 12)}).`,
+      `Worktree creado: ${r.carpeta} (rama ${r.rama}, desde ${r.ramaBase} en ${r.commit.slice(0, 12)}).`,
       `Cupo de la máquina: ${r.reserva === "reservada" ? "reservado" : "sin reservar"}.`,
       ...r.avisos.map((a) => `Aviso: ${a}`),
     ].join("\n");
@@ -59,11 +59,11 @@ export const SUBCOMANDOS_DE_WORKTREE: Readonly<Record<string, Subcomando>> = Obj
     const r = integrarWorktree(motor(paths, ticketId, opciones));
     const integracion =
       r.modo === "nada-que-integrar"
-        ? `Nada que integrar: ${r.rama} ya está en main.`
+        ? `Nada que integrar: ${r.rama} ya está en ${r.ramaBase}.`
         : [
             r.modo === "avance-directo"
-              ? `Rama ${r.rama} integrada en main por avance directo (${r.commit.slice(0, 12)}).`
-              : `Rama ${r.rama} integrada en main con merge --no-ff (${r.commit.slice(0, 12)}).`,
+              ? `Rama ${r.rama} integrada en ${r.ramaBase} por avance directo (${r.commit.slice(0, 12)}).`
+              : `Rama ${r.rama} integrada en ${r.ramaBase} con merge --no-ff (${r.commit.slice(0, 12)}).`,
             `Registros unidos: ${r.registrosUnidos.length === 0 ? "ninguno" : r.registrosUnidos.join(", ")}.`,
             `Índice de tickets: ${r.indiceRegenerado ? "regenerado" : "sin cambios"}. Recompilado.`,
             ...(r.entrega === null

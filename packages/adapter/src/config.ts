@@ -1139,6 +1139,36 @@ export function readIntegrationConfig(config: ConfigMap): IntegrationConfig {
   return { workBranch, protectedBranches };
 }
 
+/** La rama base de los worktrees de ticket si el proyecto no declara `execution.base-branch`. */
+export const DEFAULT_BASE_BRANCH = "main";
+
+const BASE_BRANCH_RE = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+
+/**
+ * Lee `execution.base-branch`: la rama de la que nacen, contra la que se integran y en la que se
+ * comprueban los worktrees de ticket. Sin la clave es `main`, y un proyecto que trabaja sobre otra
+ * rama (`dev`) la declara. No admite plantilla ni una rama de ticket.
+ */
+export function readBaseBranch(config: ConfigMap): string {
+  const execution = config["execution"] === undefined ? {} : readMap(config, "execution");
+  const crudo = execution["base-branch"];
+  if (crudo === undefined) return DEFAULT_BASE_BRANCH;
+  if (
+    typeof crudo !== "string" ||
+    !BASE_BRANCH_RE.test(crudo) ||
+    crudo.includes("..") ||
+    crudo.endsWith("/") ||
+    crudo.endsWith(".lock") ||
+    crudo.startsWith("valmen/ticket-")
+  ) {
+    fail(
+      `config.yaml: "execution.base-branch" no es un nombre de rama base válido: «${String(crudo)}». ` +
+        "Use letras, números, `.`, `_`, `-` y `/`, sin plantilla ni una rama de ticket.",
+    );
+  }
+  return crudo;
+}
+
 /** La configuración de la compuerta `qa-agent` (R-QAAG-004). */
 export interface QaAgentConfig {
   /** Comandos de la suite de regresión; cada uno debe estar también autorizado en `test-commands`. */

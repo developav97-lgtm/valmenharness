@@ -2,7 +2,7 @@
  * Crear y quitar el worktree de un ticket (corrida orquestada).
  *
  * `crearWorktree` deja `.claude/worktrees/ticket-<slug>` con la rama `valmen/ticket-<slug>` desde
- * `main`, con `node_modules` clonado y compilado, y reserva un cupo de la capacidad de la máquina.
+ * la rama base del proyecto (`execution.base-branch`, `main` si no se declara), con `node_modules` clonado y compilado, y reserva un cupo de la capacidad de la máquina.
  * Es atómico: un fallo después de la primera escritura deshace en orden inverso. `quitarWorktree`
  * solo borra lo ya integrado: no integra, no fuerza y no publica. Todo el git y los procesos salen
  * de las listas cerradas de `worktree-git.ts`.
@@ -36,6 +36,7 @@ import {
   releaseMachineCapacity,
 } from "./machine-capacity.js";
 import { resolveAuthorizedProject, type AuthorizedProject } from "./project-resolution.js";
+import { ramaBaseDelProyecto } from "./rama-base.js";
 import {
   type EjecutorDeProceso,
   ejecutarGitDeWorktree,
@@ -58,6 +59,8 @@ export interface WorktreeRequest {
 export interface WorktreeCreado {
   readonly carpeta: string;
   readonly rama: string;
+  /** La rama base de la que salió (`execution.base-branch`). */
+  readonly ramaBase: string;
   readonly commit: string;
   readonly reserva: "reservada" | "no-declarada";
   readonly avisos: readonly string[];
@@ -66,6 +69,8 @@ export interface WorktreeCreado {
 export interface WorktreeQuitado {
   readonly carpeta: string;
   readonly rama: string;
+  /** La rama base contra la que se comprobó la integración. */
+  readonly ramaBase: string;
   readonly reserva: "liberada" | "sin-reserva" | "no-declarada";
   readonly avisos: readonly string[];
 }
@@ -182,20 +187,21 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
   const absoluta = join(root, carpeta);
 
   exigirCheckoutPrincipal(root, git);
+  const ramaBase = ramaBaseDelProyecto(root);
 
   const ticket = findTicket(paths, request.ticketId);
   if (ticket === undefined)
     fail(`El ticket ${request.ticketId} no está registrado.`, EXIT_INVARIANT);
-  const enMain = ejecutarGitDeWorktree(
+  const enBase = ejecutarGitDeWorktree(
     root,
-    ["cat-file", "-e", `main:${ticket.relativePath}`],
+    ["cat-file", "-e", `${ramaBase}:${ticket.relativePath}`],
     git,
   );
-  if (enMain.status !== 0) {
+  if (enBase.status !== 0) {
     fail(
-      `El ticket ${request.ticketId} no está registrado en main (${ticket.relativePath}): commitéalo antes de crear su worktree ` +
+      `El ticket ${request.ticketId} no está registrado en ${ramaBase} (${ticket.relativePath}): commitéalo antes de crear su worktree ` +
         `(\`git add ${dirname(ticket.relativePath)} && git commit -m "docs(ticket): registra ${request.ticketId}"\`), ` +
-        "porque el worktree sale de main y la rama del ticket chocaría con el archivo sin commitear al integrarla.",
+        `porque el worktree sale de ${ramaBase} y la rama del ticket chocaría con el archivo sin commitear al integrarla.`,
       EXIT_INVARIANT,
     );
   }
@@ -278,8 +284,9 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
   try {
     const alta = ejecutarGitDeWorktree(
       root,
-      ["worktree", "add", "-b", rama, carpeta, "main"],
+      ["worktree", "add", "-b", rama, carpeta, ramaBase],
       git,
+      ramaBase,
     );
     if (alta.status !== 0) {
       // Puede haber creado la rama antes de fallar: se limpia solo lo que existe.
@@ -348,6 +355,7 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     return Object.freeze({
       carpeta,
       rama,
+      ramaBase,
       commit,
       reserva: reservada ? ("reservada" as const) : ("no-declarada" as const),
       avisos: Object.freeze(avisos),
@@ -383,15 +391,16 @@ export function quitarWorktree(request: WorktreeRequest): WorktreeQuitado {
   const absoluta = join(root, carpeta);
 
   exigirCheckoutPrincipal(root, git);
+  const ramaBase = ramaBaseDelProyecto(root);
 
   const actual = ejecutarGitDeWorktree(
     root,
     ["rev-parse", "--abbrev-ref", "HEAD"],
     git,
   ).stdout.trim();
-  if (actual !== "main") {
+  if (actual !== ramaBase) {
     fail(
-      `El checkout principal está en "${actual}", no en main: quitar el worktree borra la rama y debe comprobarse contra main.`,
+      `El checkout principal está en "${actual}", no en ${ramaBase}: quitar el worktree borra la rama y debe comprobarse contra ${ramaBase}.`,
       EXIT_INVARIANT,
     );
   }
@@ -399,12 +408,12 @@ export function quitarWorktree(request: WorktreeRequest): WorktreeQuitado {
     fail(`La rama ${rama} no existe: no hay nada que quitar.`, EXIT_INVARIANT);
   const ancestro = ejecutarGitDeWorktree(
     root,
-    ["merge-base", "--is-ancestor", rama, "main"],
+    ["merge-base", "--is-ancestor", rama, ramaBase],
     git,
   );
   if (ancestro.status !== 0) {
     fail(
-      `La rama ${rama} no está integrada en main: se conservan el worktree y la rama. Integra primero.`,
+      `La rama ${rama} no está integrada en ${ramaBase}: se conservan el worktree y la rama. Integra primero.`,
       EXIT_INVARIANT,
     );
   }
@@ -462,5 +471,5 @@ export function quitarWorktree(request: WorktreeRequest): WorktreeQuitado {
       reserva = "liberada";
     }
   }
-  return Object.freeze({ carpeta, rama, reserva, avisos: Object.freeze(avisos) });
+  return Object.freeze({ carpeta, rama, ramaBase, reserva, avisos: Object.freeze(avisos) });
 }

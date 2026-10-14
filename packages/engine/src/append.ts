@@ -531,8 +531,10 @@ export function qaStart(request: QaStartRequest): string {
     // registró. Con la igualdad probada, la corrida previa es evidencia del ciclo
     // y no hay que re-correrla sobre el commit; con cualquier otra cosa, se
     // rechaza sin escribir el bloque y la corrida se hace. Sin evidencia de
-    // worktree, la forma no está disponible y la referencia libre de siempre
-    // sigue funcionando igual.
+    // worktree la forma no está disponible: la validación solo acepta además
+    // `--build-reference worktree`, que calcula el hash (de los archivos
+    // declarados, o de los cambiados respecto de HEAD o de la rama base), o un
+    // `worktree:sha256:<hex>` literal.
     if (buildReferencePedida.startsWith("commit:")) {
       const sha = buildReferencePedida.slice("commit:".length);
       if (!/^[0-9a-f]{40}$/.test(sha)) {

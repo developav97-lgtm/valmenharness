@@ -1,8 +1,8 @@
 /**
  * Integrar la rama del worktree de un ticket al checkout principal (corrida orquestada).
  *
- * `integrarWorktree` lleva `valmen/ticket-<slug>` a `main` con avance directo si `main` no se
- * movió, o con `merge --no-ff` si avanzó, tras una comprobación previa por `merge-tree`. Une los
+ * `integrarWorktree` lleva `valmen/ticket-<slug>` a la rama base del proyecto (`execution.base-branch`,
+ * `main` si no se declara) con avance directo si la base no se movió, o con `merge --no-ff` si avanzó, tras una comprobación previa por `merge-tree`. Une los
  * registros append-only (`worktree-registros.ts`), regenera `tickets/index.md` y recompila. Un
  * conflicto de código no se resuelve: se lista y no se toca nada. Nunca hace push ni fuerza, y todo
  * el git y los procesos salen de las listas cerradas del módulo.
@@ -20,7 +20,8 @@ import {
   type RegistryPaths,
 } from "./discovery.js";
 import { renderIndex } from "./index-file.js";
-import { RAMA_BASE, estadoDelArbolDeTrabajo, ramaActual } from "./integration-commit.js";
+import { estadoDelArbolDeTrabajo, ramaActual } from "./integration-commit.js";
+import { ramaBaseDelProyecto } from "./rama-base.js";
 import { type EjecutorDeGit, motivoDeArchivoProhibido } from "./integration-rules.js";
 import { appendEvent } from "./mutate.js";
 import { cambiosDeRuta, rutasQueCuentan } from "./rutas-tocadas.js";
@@ -50,7 +51,9 @@ export interface IntegrarRequest {
 export interface WorktreeIntegrado {
   readonly rama: string;
   readonly modo: "nada-que-integrar" | "avance-directo" | "merge";
-  /** El commit de `main` tras integrar. */
+  /** La rama base en la que se integró (`execution.base-branch`). */
+  readonly ramaBase: string;
+  /** El commit de la rama base tras integrar. */
   readonly commit: string;
   readonly registrosUnidos: readonly string[];
   readonly indiceRegenerado: boolean;
@@ -82,6 +85,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
   const indiceRelativo = toRelative(paths, indexPath(paths));
 
   exigirCheckoutPrincipal(root, git);
+  const ramaBase = ramaBaseDelProyecto(root);
 
   const listada = g(root, "branch", "--list", rama);
   if (listada.status !== 0)
@@ -95,19 +99,20 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     fail(`El worktree ${carpeta} no existe: no hay nada que integrar.`, EXIT_INVARIANT);
 
   const actual = ramaActual(root, ejecutor);
-  if (actual !== RAMA_BASE) {
+  if (actual !== ramaBase) {
     fail(
-      `El checkout principal está en "${actual}", no en ${RAMA_BASE}: integrar solo avanza ${RAMA_BASE}.`,
+      `El checkout principal está en "${actual}", no en ${ramaBase}: integrar solo avanza ${ramaBase}.`,
       EXIT_INVARIANT,
     );
   }
 
   const cabeza = (): string => g(root, "rev-parse", "HEAD").stdout.trim();
 
-  if (g(root, "merge-base", "--is-ancestor", rama, RAMA_BASE).status === 0) {
+  if (g(root, "merge-base", "--is-ancestor", rama, ramaBase).status === 0) {
     return Object.freeze({
       rama,
       modo: "nada-que-integrar" as const,
+      ramaBase,
       commit: cabeza(),
       registrosUnidos: Object.freeze([]),
       indiceRegenerado: false,
@@ -127,7 +132,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
   let archivosDeLaRama: string[];
   try {
     archivosDeLaRama = rutasQueCuentan(
-      cambiosDeRuta((argumentos) => g(root, ...argumentos), `${RAMA_BASE}...${rama}`),
+      cambiosDeRuta((argumentos) => g(root, ...argumentos), `${ramaBase}...${rama}`),
     );
   } catch (error) {
     fail((error as Error).message, EXIT_INVARIANT);
@@ -136,7 +141,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
   const avisos: string[] = [];
   let entrega: EntregaRegistrada | null = null;
   try {
-    const medida = g(root, "diff", "--numstat", "-z", `${RAMA_BASE}...${rama}`);
+    const medida = g(root, "diff", "--numstat", "-z", `${ramaBase}...${rama}`);
     if (medida.status !== 0) throw new Error(medida.stderr.trim() || "git diff falló");
     entrega = registrarEntrega(medida.stdout, root);
   } catch (error) {
@@ -203,7 +208,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
   const registrosUnidos: string[] = [];
   let indiceRegenerado = false;
 
-  if (g(root, "merge-base", "--is-ancestor", RAMA_BASE, rama).status === 0) {
+  if (g(root, "merge-base", "--is-ancestor", ramaBase, rama).status === 0) {
     modo = "avance-directo";
     const ff = g(root, "merge", "--ff-only", rama);
     if (ff.status !== 0) fail(`merge --ff-only falló: ${ff.stderr.trim()}`, EXIT_INVARIANT);
@@ -235,7 +240,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
       "--write-tree",
       "--name-only",
       "--no-messages",
-      RAMA_BASE,
+      ramaBase,
       rama,
     );
     if (previa.status !== 0 && previa.status !== 1)
@@ -253,18 +258,18 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     );
     if (sinResolver.length > 0) {
       fail(
-        `Conflicto de código entre ${RAMA_BASE} y ${rama} en: ${sinResolver.join(", ")}. No se tocó ${RAMA_BASE}: resuélvelo en el worktree y vuelve a integrar.`,
+        `Conflicto de código entre ${ramaBase} y ${rama} en: ${sinResolver.join(", ")}. No se tocó ${ramaBase}: resuélvelo en el worktree y vuelve a integrar.`,
         EXIT_INVARIANT,
       );
     }
 
-    const base = g(root, "merge-base", RAMA_BASE, rama).stdout.trim();
+    const base = g(root, "merge-base", ramaBase, rama).stdout.trim();
     const m = g(root, "merge", "--no-ff", "--no-commit", rama);
     const abortar = (motivo: string): never => {
       const a = g(root, "merge", "--abort");
       return fail(
         a.status === 0
-          ? `${motivo} Se ejecutó merge --abort: ${RAMA_BASE} quedó como estaba.`
+          ? `${motivo} Se ejecutó merge --abort: ${ramaBase} quedó como estaba.`
           : `${motivo} Además \`merge --abort\` falló (${a.stderr.trim()}): revisa el checkout principal a mano.`,
         EXIT_INVARIANT,
       );
@@ -277,11 +282,11 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
           const r = g(root, "show", `${revision}:${ruta}`);
           return r.status === 0 ? r.stdout : null;
         };
-        const ours = leerVersion(RAMA_BASE);
+        const ours = leerVersion(ramaBase);
         const theirs = leerVersion(rama);
         if (ours === null || theirs === null)
           abortar(
-            `No se puede unir ${ruta}: falta en ${ours === null ? RAMA_BASE : rama}.`,
+            `No se puede unir ${ruta}: falta en ${ours === null ? ramaBase : rama}.`,
           );
         const union = unirRegistro({
           ruta,
@@ -315,7 +320,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
       if (c.status !== 0)
         abortar(`git commit falló: ${c.stderr.trim() || c.stdout.trim()}`);
     } catch (caught) {
-      // Un fallo inesperado a mitad del merge también deja `main` como estaba.
+      // Un fallo inesperado a mitad del merge también deja la rama base como estaba.
       if (existsSync(join(root, ".git", "MERGE_HEAD"))) g(root, "merge", "--abort");
       throw caught;
     }
@@ -329,7 +334,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
     const r = ejecutarProcesoDeWorktree(comando, argumentos, root, request.proceso);
     if (r.status !== 0) {
       fail(
-        `La rama ${rama} quedó integrada en ${RAMA_BASE} (${commit.slice(0, 12)}), pero la recompilación falló (${comando} ${argumentos.join(" ")}): ${(r.stderr || r.stdout).trim().slice(0, 500)}. La integración se conserva: recompila a mano con \`npm run build\`.`,
+        `La rama ${rama} quedó integrada en ${ramaBase} (${commit.slice(0, 12)}), pero la recompilación falló (${comando} ${argumentos.join(" ")}): ${(r.stderr || r.stdout).trim().slice(0, 500)}. La integración se conserva: recompila a mano con \`npm run build\`.`,
         EXIT_INVARIANT,
       );
     }
@@ -337,6 +342,7 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
   return Object.freeze({
     rama,
     modo,
+    ramaBase,
     commit,
     registrosUnidos: Object.freeze(registrosUnidos),
     indiceRegenerado,

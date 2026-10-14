@@ -24,7 +24,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { isAbsolute, join, relative, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, sep } from "node:path";
 
 import {
   BUILD_REFERENCE_RE,
@@ -34,6 +34,8 @@ import {
   validateReference,
 } from "@valmen/core";
 import { EXIT_REFERENCE } from "@valmen/core";
+
+import { ramaBaseDelProyecto } from "./rama-base.js";
 
 /**
  * Pregunta a git si conoce una ruta del proyecto.
@@ -121,24 +123,32 @@ export function declaredFunctionalFiles(
 /**
  * Un ticket sin puntos no tiene por qué inventar un hallazgo solo para QA.
  * En ese caso el árbol de trabajo declara por sí mismo qué archivos funcionales
- * se validaron; el historial (`tickets/`) y el estado del harness (`.valmen/`)
- * nunca entran al hash.
+ * se validaron: lo modificado respecto de `HEAD` o, con el árbol limpio, lo que
+ * la rama del ticket cambió desde la rama base del proyecto. El historial —el
+ * registro real, sea `tickets/` o `docs/tickets/`— y el estado del harness
+ * (`.valmen/`) nunca entran al hash.
  */
 function modifiedFunctionalFiles(root: string, ticketPath: string): string[] {
-  const result = spawnSync("git", ["diff", "--name-only", "--diff-filter=ACMR", "HEAD"], {
-    cwd: root,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  if (result.status !== 0) return [];
-  return result.stdout
-    .split("\n")
-    .map((path) => path.trim())
-    .filter(
-      (path) => path !== "" && !path.startsWith("tickets/") && !path.startsWith(".valmen/"),
-    )
-    .map((path) => validateFunctionalFile(path, ticketPath, root))
-    .sort();
+  // `ticketPath` es `<registro>/AAAA/<ID>/ticket.md`: de ahí sale el registro.
+  const registro = relative(root, dirname(dirname(dirname(ticketPath)))).split(sep).join("/");
+  const prefijos = ["tickets/", ".valmen/"];
+  if (registro !== "" && !registro.startsWith("..")) prefijos.push(`${registro}/`);
+  const cambiados = (desde: string): string[] => {
+    const result = spawnSync("git", ["diff", "--name-only", "--diff-filter=ACMR", desde], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (result.status !== 0) return [];
+    return result.stdout
+      .split("\n")
+      .map((path) => path.trim())
+      .filter((path) => path !== "" && !prefijos.some((prefijo) => path.startsWith(prefijo)))
+      .map((path) => validateFunctionalFile(path, ticketPath, root))
+      .sort();
+  };
+  const enElArbol = cambiados("HEAD");
+  return enElArbol.length > 0 ? enElArbol : cambiados(`${ramaBaseDelProyecto(root)}...HEAD`);
 }
 
 /**
@@ -158,7 +168,11 @@ export function calculateWorktreeReference(
   const archivos =
     declarados.length > 0 ? declarados : modifiedFunctionalFiles(root, ticketPath);
   if (archivos.length === 0) {
-    fail("No hay archivos funcionales modificados para calcular el hash.", EXIT_REFERENCE);
+    fail(
+      "No hay archivos funcionales modificados para calcular el hash. " +
+        "Declara los archivos en `affected_files` de un punto, o calcula la referencia desde la rama del ticket con sus commits sobre la rama base.",
+      EXIT_REFERENCE,
+    );
   }
 
   const hash = createHash("sha256");

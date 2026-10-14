@@ -31,6 +31,7 @@ export * from "./http-criterion.js";
 export * from "./integration-commit.js";
 export * from "./tamano-entrega.js";
 export * from "./integration-rules.js";
+export * from "./rama-base.js";
 export * from "./worktree-git.js";
 export * from "./limpieza-git.js";
 export * from "./limpieza.js";
