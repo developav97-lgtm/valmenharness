@@ -4,7 +4,8 @@
  * La limpieza masiva necesita quitar worktrees que no son `ticket-<slug>` (desacoplados, de una
  * sesión ajena), algo que la lista de `journey worktree` no admite a propósito y que aquí no se
  * amplía. Esta lista solo deja `worktree remove` de una carpeta directa de `.claude/worktrees/` y
- * `branch -d` de una rama que no sea `main`; el resto es lectura. Lo demás se rechaza antes de
+ * `branch -d` de una rama que no sea `main` ni la rama base del proyecto; el resto es lectura y
+ * `merge-base` solo mide contra la rama base. Lo demás se rechaza antes de
  * lanzar nada: ni push, reset, clean, tag, ni banderas de fuerza (`--force`, `-f`, `-D`, `--hard`).
  */
 import { spawnSync } from "node:child_process";
@@ -22,8 +23,14 @@ function esCarpetaDeWorktree(carpeta: string): boolean {
   return !carpeta.split("/").includes("..") && CARPETA_DE_WORKTREE.test(carpeta);
 }
 
-/** Por qué una invocación de git no se admite en la limpieza, o `null` si se admite. */
-export function motivoDeGitDeLimpieza(argumentos: readonly string[]): string | null {
+/**
+ * Por qué una invocación de git no se admite en la limpieza, o `null` si se admite. `ramaBase` es la
+ * rama base del proyecto (`ramaBaseDelProyecto`), `main` si no se pasa.
+ */
+export function motivoDeGitDeLimpieza(
+  argumentos: readonly string[],
+  ramaBase = "main",
+): string | null {
   const [operacion, ...resto] = argumentos;
   if (operacion === undefined) return "No se indicó ninguna operación de git.";
   const prohibida = resto.find((a) => BANDERAS_DE_FUERZA.includes(a));
@@ -47,16 +54,17 @@ export function motivoDeGitDeLimpieza(argumentos: readonly string[]): string | n
       return resto.length === 3 &&
         resto[0] === "--is-ancestor" &&
         REFERENCIA.test(resto[1]!) &&
-        resto[2] === "main"
+        resto[2] === ramaBase
         ? null
-        : "git merge-base solo se admite como `--is-ancestor <ref> main`.";
+        : `git merge-base solo se admite como \`--is-ancestor <ref> ${ramaBase}\`.`;
     case "branch":
       return resto.length === 2 &&
         resto[0] === "-d" &&
         resto[1] !== "main" &&
+        resto[1] !== ramaBase &&
         REFERENCIA.test(resto[1]!)
         ? null
-        : "git branch solo se admite como `-d <rama distinta de main>`.";
+        : `git branch solo se admite como \`-d <rama distinta de main y de ${ramaBase}>\`.`;
     case "worktree":
       if (resto.length === 2 && resto[0] === "list" && resto[1] === "--porcelain")
         return null;
@@ -82,8 +90,9 @@ export function ejecutarGitDeLimpieza(
   cwd: string,
   argumentos: readonly string[],
   ejecutor: EjecutorDeGit = ejecutarGitDeVerdad,
+  ramaBase = "main",
 ): { readonly status: number; readonly stdout: string; readonly stderr: string } {
-  const motivo = motivoDeGitDeLimpieza(argumentos);
+  const motivo = motivoDeGitDeLimpieza(argumentos, ramaBase);
   if (motivo !== null) fail(motivo, EXIT_INVARIANT);
   return ejecutor(argumentos, cwd);
 }

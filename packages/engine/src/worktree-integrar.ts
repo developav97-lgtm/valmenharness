@@ -37,6 +37,7 @@ import {
   ejecutarProcesoDeWorktree,
   exigirCheckoutPrincipal,
   nombresDeWorktree,
+  tieneRecetaDeCompilacion,
 } from "./worktree-git.js";
 import { esRegistroUnible, unirRegistro } from "./worktree-registros.js";
 
@@ -327,10 +328,14 @@ export function integrarWorktree(request: IntegrarRequest): WorktreeIntegrado {
   }
 
   const commit = cabeza();
-  for (const [comando, argumentos] of [
-    ["npx", ["tsc", "--build", "tsconfig.build.json"]],
-    ["node", ["scripts/copy-web.mjs"]],
-  ] as const) {
+  // Solo el proyecto que tiene la receta de compilación del harness se recompila.
+  const receta = tieneRecetaDeCompilacion(root)
+    ? ([
+        ["npx", ["tsc", "--build", "tsconfig.build.json"]],
+        ["node", ["scripts/copy-web.mjs"]],
+      ] as const)
+    : [];
+  for (const [comando, argumentos] of receta) {
     const r = ejecutarProcesoDeWorktree(comando, argumentos, root, request.proceso);
     if (r.status !== 0) {
       fail(

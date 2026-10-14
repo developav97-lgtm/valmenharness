@@ -27,6 +27,7 @@ import { type RegistryPaths, findAllTickets } from "./discovery.js";
 import { type EjecutorDeGit } from "./integration-rules.js";
 import { ejecutarGitDeLimpieza } from "./limpieza-git.js";
 import { readMachineCapacity, releaseMachineCapacity } from "./machine-capacity.js";
+import { ramaBaseDelProyecto } from "./rama-base.js";
 import { INTENTO_DE_WORKTREE, proyectoDeLaMaquina } from "./worktree.js";
 import { exigirCheckoutPrincipal, nombresDeWorktree } from "./worktree-git.js";
 
@@ -152,7 +153,7 @@ function worktreesDeLaCarpeta(
   return encontrados.sort((a, b) => a.absoluta.localeCompare(b.absoluta));
 }
 
-/** El slug de cada ticket del registro que no está `closed`; el registro de `main` manda. */
+/** El slug de cada ticket del registro que no está `closed`; el registro de la rama base manda. */
 function slugsDeTicketsSinCerrar(paths: RegistryPaths): Set<string> {
   const abiertos = new Set<string>();
   let tickets: ReturnType<typeof findAllTickets> = [];
@@ -172,16 +173,16 @@ function slugsDeTicketsSinCerrar(paths: RegistryPaths): Set<string> {
   return abiertos;
 }
 
-function exigirMain(root: string, git: EjecutorDeGit | undefined): void {
+function exigirRamaBase(root: string, git: EjecutorDeGit | undefined, ramaBase: string): void {
   exigirCheckoutPrincipal(root, git);
   const actual = ejecutarGitDeLimpieza(
     root,
     ["rev-parse", "--abbrev-ref", "HEAD"],
     git,
   ).stdout.trim();
-  if (actual !== "main") {
+  if (actual !== ramaBase) {
     fail(
-      `El checkout principal está en "${actual}", no en main: la limpieza solo corre desde main.`,
+      `El checkout principal está en "${actual}", no en ${ramaBase}: la limpieza solo corre desde ${ramaBase}.`,
       EXIT_INVARIANT,
     );
   }
@@ -192,6 +193,7 @@ function clasificarWorktree(
   w: WorktreeDeGit,
   sinCerrar: Set<string>,
   git: EjecutorDeGit | undefined,
+  ramaBase: string,
 ): ElementoDeLimpieza {
   const raiz = realpathOrSame(paths.root);
   const base = {
@@ -210,14 +212,15 @@ function clasificarWorktree(
   if (estado.status !== 0 || estado.stdout.trim() !== "") return conservar("árbol sucio");
   const integrado = ejecutarGitDeLimpieza(
     paths.root,
-    ["merge-base", "--is-ancestor", w.commit, "main"],
+    ["merge-base", "--is-ancestor", w.commit, ramaBase],
     git,
+    ramaBase,
   );
   if (integrado.status !== 0) return conservar("commits sin integrar");
   const nombre = basename(w.absoluta);
   if (nombre.startsWith("ticket-") && sinCerrar.has(nombre.slice("ticket-".length)))
     return conservar("ticket sin cerrar");
-  return { ...base, accion: "quitar", motivo: "integrado en main y limpio" };
+  return { ...base, accion: "quitar", motivo: `integrado en ${ramaBase} y limpio` };
 }
 
 function marcaDeRespaldo(nombre: string): number | null {
@@ -275,10 +278,11 @@ function respaldosDeSync(root: string, ahora: Date): ElementoDeLimpieza[] {
 /** Lo que la limpieza quitaría y lo que conserva, sin escribir ni quitar nada. */
 export function vistaDeLimpieza(request: LimpiezaRequest): VistaDeLimpieza {
   const { paths, git } = request;
-  exigirMain(paths.root, git);
+  const ramaBase = ramaBaseDelProyecto(paths.root);
+  exigirRamaBase(paths.root, git, ramaBase);
   const sinCerrar = slugsDeTicketsSinCerrar(paths);
   const worktrees = worktreesDeLaCarpeta(paths.root, git).map((w) =>
-    clasificarWorktree(paths, w, sinCerrar, git),
+    clasificarWorktree(paths, w, sinCerrar, git, ramaBase),
   );
   return Object.freeze({
     worktrees: Object.freeze(worktrees),
@@ -403,7 +407,12 @@ export function aplicarLimpieza(request: LimpiezaRequest): LimpiezaAplicada {
     const avisos: string[] = [];
     let error: string | undefined;
     if (w.rama !== null) {
-      const borrada = ejecutarGitDeLimpieza(root, ["branch", "-d", w.rama], git);
+      const borrada = ejecutarGitDeLimpieza(
+        root,
+        ["branch", "-d", w.rama],
+        git,
+        ramaBaseDelProyecto(root),
+      );
       if (borrada.status !== 0)
         error = `git branch -d falló (el worktree ya se quitó): ${borrada.stderr.trim()}`;
     }

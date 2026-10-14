@@ -21,6 +21,7 @@ import {
 } from "./integration-rules.js";
 import { type RegistryPaths, findTicket } from "./discovery.js";
 import { appendEvent } from "./mutate.js";
+import { ramaBaseDelProyecto } from "./rama-base.js";
 import { scanPendingChanges } from "./secrets.js";
 import {
   type EntregaRegistrada,
@@ -161,13 +162,12 @@ export function hashDeArchivosEnCommit(
   });
 }
 
-/** Las ramas que la jornada nace o avanza desde: `main`, literal del pedido. */
-export const RAMA_BASE = "main";
-
 /**
- * Deja la rama de trabajo al día con `main` y el árbol parado en ella antes de despachar.
+ * Deja la rama de trabajo al día con la rama base del proyecto (`ramaBaseDelProyecto`: la
+ * `execution.base-branch` de la configuración, `main` si no se declara) y el árbol parado en ella
+ * antes de despachar.
  *
- * Si no existe se crea desde `main`; si existe y es ancestro de `main` se avanza con
+ * Si no existe se crea desde la base; si existe y es ancestro de la base se avanza con
  * `merge --ff-only`; si divergió no se toca y se dice. Mover o avanzar la rama exige el árbol
  * limpio: hacerlo con cambios del ticket anterior los mezclaría con el siguiente.
  */
@@ -182,27 +182,28 @@ export function asegurarRamaDeTrabajo(request: {
   if (request.ramasProtegidas.includes(ramaDeTrabajo)) {
     fail(`La rama de trabajo (${ramaDeTrabajo}) es una rama protegida.`, EXIT_INVARIANT);
   }
+  const ramaBase = ramaBaseDelProyecto(root);
   const git = (...argumentos: string[]) => ejecutarGitPermitido(root, argumentos, ejecutor);
   const existe = (rama: string): boolean =>
     git("rev-parse", "--verify", "--quiet", `refs/heads/${rama}`).status === 0;
-  if (!existe(RAMA_BASE)) {
+  if (!existe(ramaBase)) {
     fail(
-      `No existe la rama base ${RAMA_BASE}: la jornada no puede dejar ${ramaDeTrabajo} al día.`,
+      `No existe la rama base ${ramaBase}: la jornada no puede dejar ${ramaDeTrabajo} al día.`,
       EXIT_INVARIANT,
     );
   }
   const actual = ramaActual(root, ejecutor);
   const rama = existe(ramaDeTrabajo);
   const alDia =
-    rama && git("merge-base", "--is-ancestor", RAMA_BASE, ramaDeTrabajo).status === 0;
+    rama && git("merge-base", "--is-ancestor", ramaBase, ramaDeTrabajo).status === 0;
   if (
     rama &&
     !alDia &&
-    git("merge-base", "--is-ancestor", ramaDeTrabajo, RAMA_BASE).status !== 0
+    git("merge-base", "--is-ancestor", ramaDeTrabajo, ramaBase).status !== 0
   ) {
     fail(
-      `La rama de trabajo ${ramaDeTrabajo} divergió de ${RAMA_BASE}: tiene commits que ${RAMA_BASE} no tiene y ` +
-        `${RAMA_BASE} tiene commits que ella no tiene. La jornada no la toca; resuélvelo a mano.`,
+      `La rama de trabajo ${ramaDeTrabajo} divergió de ${ramaBase}: tiene commits que ${ramaBase} no tiene y ` +
+        `${ramaBase} tiene commits que ella no tiene. La jornada no la toca; resuélvelo a mano.`,
       EXIT_INVARIANT,
     );
   }
@@ -217,7 +218,7 @@ export function asegurarRamaDeTrabajo(request: {
     );
   }
   if (!rama) {
-    const creada = git("switch", "-c", ramaDeTrabajo, RAMA_BASE);
+    const creada = git("switch", "-c", ramaDeTrabajo, ramaBase);
     if (creada.status !== 0)
       fail(`No se pudo crear la rama de trabajo: ${creada.stderr.trim()}`, EXIT_INVARIANT);
     return { rama: ramaDeTrabajo, cambiada: true };
@@ -231,10 +232,10 @@ export function asegurarRamaDeTrabajo(request: {
       );
   }
   if (!alDia) {
-    const avance = git("merge", "--ff-only", RAMA_BASE);
+    const avance = git("merge", "--ff-only", ramaBase);
     if (avance.status !== 0) {
       fail(
-        `No se pudo avanzar ${ramaDeTrabajo} hasta ${RAMA_BASE}: ${avance.stderr.trim()}`,
+        `No se pudo avanzar ${ramaDeTrabajo} hasta ${ramaBase}: ${avance.stderr.trim()}`,
         EXIT_INVARIANT,
       );
     }

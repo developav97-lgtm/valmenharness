@@ -10,8 +10,8 @@
  * un módulo suyo y reutiliza `nombresDeWorktree`, `exigirCheckoutPrincipal` y `motivoDeGitDeWorktree`.
  */
 import { spawnSync } from "node:child_process";
-import { realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, realpathSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import { DENIED_GIT_FLAGS, EXIT_INVARIANT, fail } from "@valmen/core";
 
@@ -170,6 +170,19 @@ export function exigirCheckoutPrincipal(root: string, git?: EjecutorDeGit): void
       EXIT_INVARIANT,
     );
   }
+}
+
+/**
+ * Si el proyecto tiene la receta de compilación del harness (clonar `node_modules`,
+ * `npx tsc --build tsconfig.build.json` y `node scripts/copy-web.mjs`): la tiene el monorepo del
+ * harness, que se reconoce por `tsconfig.build.json` o por `node_modules/@valmen` en la raíz. Un
+ * proyecto sin ninguno de los dos (SaiOpenCloud) no la tiene, y create e integrate no la piden.
+ */
+export function tieneRecetaDeCompilacion(root: string): boolean {
+  return (
+    existsSync(join(root, "tsconfig.build.json")) ||
+    existsSync(join(root, "node_modules", "@valmen"))
+  );
 }
 
 export type EjecutorDeProceso = (

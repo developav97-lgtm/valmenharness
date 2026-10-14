@@ -50,6 +50,7 @@ import { type GateRunOptions, defaultReceiptId } from "./gate.js";
 import { motivoDeArchivoProhibido } from "./integration-rules.js";
 import { isUiFile, scanFixedColors } from "./presentation.js";
 import { scriptsDeComandos } from "./qa-eligibility.js";
+import { ramaBaseDelProyecto } from "./rama-base.js";
 import { appendReceipt, currentReceipts, readReceipts } from "./receipts.js";
 import type { RunnerResult } from "./result.js";
 import { riesgoDeRevision } from "./review-risk.js";
@@ -277,11 +278,24 @@ export async function runCodeReview(
     );
   }
 
-  const ref =
-    options.base ??
-    (git(paths.root, ["rev-parse", "--verify", "-q", "main^{commit}"]) === null
-      ? "HEAD"
-      : "main");
+  // Sin `--base`, la rama base del proyecto (`execution.base-branch`, `main` si no se declara), o
+  // `HEAD` si esa rama no existe.
+  let ref = options.base;
+  if (ref === undefined) {
+    let ramaBase: string;
+    try {
+      ramaBase = ramaBaseDelProyecto(paths.root);
+    } catch (caught) {
+      return error(
+        `No se pudo resolver la rama base del proyecto: ${toFailure(caught).message}`,
+        EXIT_INVARIANT,
+      );
+    }
+    ref =
+      git(paths.root, ["rev-parse", "--verify", "-q", `${ramaBase}^{commit}`]) === null
+        ? "HEAD"
+        : ramaBase;
+  }
   let cambios;
   try {
     cambios = cambiosContraBase(paths.root, ref, ticketId, paths.ticketsDir);

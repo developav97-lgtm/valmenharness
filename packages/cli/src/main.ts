@@ -244,7 +244,8 @@ Comandos:
                             routing los roles que el harness ya no ejecuta.
   sync [--check|--dry-run]  Proyecta .valmen/ a AGENTS.md.
   cleanup [--confirm] [--json]
-                            Lista los worktrees de .claude/worktrees/ ya integrados en main
+                            Lista los worktrees de .claude/worktrees/ ya integrados en la rama base
+                            (execution.base-branch, main si falta)
                             y los respaldos de sync vencidos (backup-retention-days, 30 por
                             defecto); sin --confirm no quita nada.
   adopt [--dry-run] [--machine-id <id>] [--codegraph]
@@ -382,7 +383,8 @@ Comandos:
       --force-reason <m>    Repite una compuerta ya evaluada sobre el mismo estado y con el
                             mismo evaluador: sin motivo se rechaza; con él queda en el recibo.
       --evaluator <id>      auto (por defecto) · command · jev · llm-judge · cascade
-      --base <ref>          code-review: la base del diff (por defecto main, o HEAD si no existe).
+      --base <ref>          code-review: la base del diff (por defecto la rama base del proyecto,
+                            o HEAD si no existe).
                             code-review revisa el diff entregado según su riesgo y no admite --evaluator.
   promote-gate <gate>       Calibra el gate contra decisiones humanas y anexa la
       --limit <n>           evidencia que una solicitud gate-promotions necesita.

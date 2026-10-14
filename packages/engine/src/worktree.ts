@@ -43,6 +43,7 @@ import {
   ejecutarProcesoDeWorktree,
   exigirCheckoutPrincipal,
   nombresDeWorktree,
+  tieneRecetaDeCompilacion,
 } from "./worktree-git.js";
 
 /** El intento con el que el worktree de un ticket reserva y libera su cupo. */
@@ -297,50 +298,58 @@ export function crearWorktree(request: WorktreeRequest): WorktreeCreado {
     worktreeCreado = true;
     ramaCreada = true;
 
-    const origen = join(root, "node_modules");
-    if (!existsSync(origen))
-      abortar(
-        `No hay ${origen} que clonar: instala las dependencias en el checkout principal.`,
-      );
-    const destino = join(absoluta, "node_modules");
-    let copia = ejecutarProcesoDeWorktree(
-      "cp",
-      ["-Rc", origen, destino],
-      root,
-      request.proceso,
-    );
-    if (copia.status !== 0) {
-      // Fuera de APFS no hay clon: cae a la copia normal, solo si el intento no dejó nada a medias.
-      if (existsSync(destino))
+    // La receta de compilación es la del monorepo del harness: en un proyecto que no la tiene
+    // (sin `tsconfig.build.json` ni `node_modules/@valmen`) no se clona ni se compila nada.
+    if (tieneRecetaDeCompilacion(root)) {
+      const origen = join(root, "node_modules");
+      if (!existsSync(origen))
         abortar(
-          `El clon de node_modules falló y dejó una copia parcial: ${copia.stderr.trim()}`,
+          `No hay ${origen} que clonar: instala las dependencias en el checkout principal.`,
         );
-      copia = ejecutarProcesoDeWorktree(
+      const destino = join(absoluta, "node_modules");
+      let copia = ejecutarProcesoDeWorktree(
         "cp",
-        ["-R", origen, destino],
+        ["-Rc", origen, destino],
         root,
         request.proceso,
       );
-      if (copia.status !== 0)
-        abortar(`No se pudo clonar node_modules: ${copia.stderr.trim()}`);
-    }
-    const fuera = enlacesFueraDelWorktree(absoluta);
-    if (fuera.length > 0) {
-      abortar(
-        `El clon de node_modules no quedó contenido en el worktree: @valmen/${fuera.join(", @valmen/")} resuelve fuera de ${carpeta}.`,
-      );
-    }
-
-    for (const [comando, argumentos] of [
-      ["npx", ["tsc", "--build", "tsconfig.build.json"]],
-      ["node", ["scripts/copy-web.mjs"]],
-    ] as const) {
-      const r = ejecutarProcesoDeWorktree(comando, argumentos, absoluta, request.proceso);
-      if (r.status !== 0) {
+      if (copia.status !== 0) {
+        // Fuera de APFS no hay clon: cae a la copia normal, solo si el intento no dejó nada a medias.
+        if (existsSync(destino))
+          abortar(
+            `El clon de node_modules falló y dejó una copia parcial: ${copia.stderr.trim()}`,
+          );
+        copia = ejecutarProcesoDeWorktree(
+          "cp",
+          ["-R", origen, destino],
+          root,
+          request.proceso,
+        );
+        if (copia.status !== 0)
+          abortar(`No se pudo clonar node_modules: ${copia.stderr.trim()}`);
+      }
+      const fuera = enlacesFueraDelWorktree(absoluta);
+      if (fuera.length > 0) {
         abortar(
-          `La compilación falló (${comando} ${argumentos.join(" ")}): ${(r.stderr || r.stdout).trim().slice(0, 500)}`,
+          `El clon de node_modules no quedó contenido en el worktree: @valmen/${fuera.join(", @valmen/")} resuelve fuera de ${carpeta}.`,
         );
       }
+
+      for (const [comando, argumentos] of [
+        ["npx", ["tsc", "--build", "tsconfig.build.json"]],
+        ["node", ["scripts/copy-web.mjs"]],
+      ] as const) {
+        const r = ejecutarProcesoDeWorktree(comando, argumentos, absoluta, request.proceso);
+        if (r.status !== 0) {
+          abortar(
+            `La compilación falló (${comando} ${argumentos.join(" ")}): ${(r.stderr || r.stdout).trim().slice(0, 500)}`,
+          );
+        }
+      }
+    } else {
+      avisos.push(
+        "El proyecto no tiene la receta de compilación del harness (tsconfig.build.json o node_modules/@valmen en la raíz): no se compiló el worktree ni se clonó node_modules.",
+      );
     }
 
     try {
