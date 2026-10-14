@@ -145,6 +145,7 @@ import { guardarFotoEnTicket, leerLineaDeTiempo } from "./timeline.js";
 import { readExecutionPanel, readExecutionVisibleMessages } from "./execution-panel.js";
 import { readSourceFreshness } from "./source-freshness.js";
 import { esSesionValida, leerAgentesDeCorrida } from "./agentes.js";
+import { leerInicio } from "./inicio.js";
 import {
   approveGate,
   listGateRows,
@@ -525,6 +526,14 @@ export async function handleApi(
         })),
       },
     };
+  }
+
+  // GET /api/inicio
+  //
+  // Lo que espera una decisión de la persona, las cifras del registro y lo hecho hoy, para la
+  // vista Inicio (R-MARCO-005). Solo lectura: las reglas son las del motor (D-001).
+  if (method === "GET" && path === "/api/inicio") {
+    return { status: 200, body: leerInicio(paths) };
   }
 
   // GET /api/providers/:id/models
