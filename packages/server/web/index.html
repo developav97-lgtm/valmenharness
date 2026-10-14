@@ -2876,6 +2876,107 @@
           text-transform: uppercase; letter-spacing: 0.06em;
         }
       }
+      /* ── Modelos › Cambiar de perfil (boceto assets/modelos-cambiar-perfil.html) ─────── */
+      /* Lila es el perfil elegido, cian la marca de selección, ámbar lo que decidió una persona. */
+      .cambiar-perfil { display: flex; flex-direction: column; gap: 24px; max-width: 1240px; }
+      .miga-perfil {
+        font-family: var(--mono); font-size: 13px; letter-spacing: 0.1em;
+        text-transform: uppercase; color: var(--tenue);
+      }
+      .miga-perfil a { color: var(--acento); text-decoration: none; }
+      .titulo-cambiar-perfil {
+        font-family: var(--fuente-titulo); font-size: 36px; font-weight: 600; line-height: 1.08;
+        margin: 0; border: 0; padding: 0; text-transform: none; letter-spacing: normal; color: var(--texto);
+      }
+      .rejilla-perfiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+      .tarjeta-perfil, .tarjeta-nueva {
+        display: flex; flex-direction: column; gap: 8px; min-height: 150px; min-width: 0;
+        padding: 18px; border-radius: 14px; text-align: left; cursor: pointer;
+        background: var(--panel); color: var(--texto); border: 1px solid var(--borde); font: inherit;
+      }
+      .tarjeta-perfil:hover, .tarjeta-nueva:hover { background: var(--panel-alto); }
+      .tarjeta-perfil[aria-pressed="true"] { border-color: var(--modelo); box-shadow: inset 0 0 0 1px var(--modelo); background: var(--modelo-suave); }
+      .tarjeta-nueva {
+        align-items: center; justify-content: center; text-align: center;
+        border-style: dashed; background: transparent; color: var(--tenue);
+      }
+      .tarjeta-nueva .mas { font-size: 26px; line-height: 1; color: var(--acento); }
+      .tarjeta-nueva .nueva-titulo { font-weight: 600; color: var(--texto); }
+      .cab-tarjeta-perfil { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+      .titulo-perfil {
+        font-family: var(--fuente-titulo); font-weight: 600; font-size: 20px; overflow-wrap: anywhere; min-width: 0;
+      }
+      .marca-tarjeta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--acento); }
+      .marca-tarjeta.activo { color: var(--modelo); }
+      .origen-tarjeta { font-family: var(--mono); font-size: 12.5px; color: var(--tenue); }
+      .desc-tarjeta { font-size: 14px; color: var(--texto); }
+      .proveedores-tarjeta { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+      .proveedor-tarjeta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tenue); }
+      .punto-proveedor { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+      .punto-proveedor.falta { background: var(--persona); }
+      .que-cambia { display: flex; flex-direction: column; gap: 12px; }
+      .que-cambia h2, .alcance-perfil legend {
+        font-family: var(--fuente-titulo); font-weight: 600; font-size: 22px; margin: 0;
+        border: 0; padding: 0; text-transform: none; letter-spacing: normal; color: var(--texto);
+      }
+      .que-cambia h2 .id-elegido { color: var(--modelo); }
+      .caja-cambio { border: 1px solid var(--borde); border-radius: 14px; background: var(--panel); overflow-x: auto; }
+      .tabla-cambio { width: 100%; border-collapse: collapse; }
+      .tabla-cambio th, .tabla-cambio td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--borde); font-size: 14.5px; }
+      .tabla-cambio thead th {
+        font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--tenue); font-weight: 500;
+        position: static; background: transparent;
+      }
+      .tabla-cambio .trabajo-cambio { font-weight: 600; }
+      .tabla-cambio .antes {
+        font-family: var(--mono); color: var(--tenue);
+        text-decoration: line-through; text-decoration-color: var(--tenue-deco); overflow-wrap: anywhere;
+      }
+      .tabla-cambio .flecha { color: var(--modelo); width: 24px; }
+      .tabla-cambio .despues { font-family: var(--mono); color: var(--texto); overflow-wrap: anywhere; }
+      .nota-cambio { padding: 12px 14px; font-size: 13.5px; color: var(--tenue); }
+      .aviso-fase {
+        display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px;
+        border-radius: 12px; border: 1px solid var(--persona); background: var(--alerta-suave); font-size: 14px;
+      }
+      .aviso-fase .punto-aviso { width: 9px; height: 9px; border-radius: 50%; background: var(--persona); flex: none; }
+      .aviso-fase .texto-aviso-fase { flex: 1 1 200px; min-width: 0; }
+      .aviso-fase .volver-perfil { flex-basis: 100%; }
+      .aviso-fase .volver-perfil:empty { display: none; }
+      .alcance-perfil { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+      .alcance-perfil legend { font-size: 20px; margin-bottom: 10px; }
+      .opcion-alcance {
+        display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px;
+        border: 1px solid var(--borde); background: var(--panel); cursor: pointer;
+        font-size: 15px; color: var(--texto); margin: 0;
+      }
+      .opcion-alcance input { accent-color: var(--modelo); width: 18px; height: 18px; margin: 2px 0 0; }
+      .opcion-alcance .recomendado { font-family: var(--mono); font-size: 11.5px; color: var(--modelo); }
+      .opcion-alcance .detalle-alcance { display: block; color: var(--tenue); font-size: 14px; }
+      .cliente-alcance { display: flex; gap: 8px; align-items: center; color: var(--tenue); padding-left: 46px; font-size: 14px; margin: 0; }
+      .acciones-perfil { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 6px; }
+      .acciones-perfil .aplicar-perfil {
+        min-height: 44px; padding: 0 20px; border-radius: 10px; font-weight: 600; font-size: 15px;
+        background: var(--modelo); color: var(--sobre-acento); border-color: var(--modelo);
+      }
+      .acciones-perfil .cancelar-perfil {
+        display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 10px;
+        border: 1px solid var(--borde); color: var(--texto); background: var(--panel); text-decoration: none; font-weight: 600; font-size: 15px;
+      }
+      .acciones-perfil .resultado { flex-basis: 100%; }
+      .ya-activo { padding: 18px; border-radius: 12px; border: 1px solid var(--borde); background: var(--panel); color: var(--tenue); }
+      @media (max-width: 767px) {
+        .rejilla-perfiles { grid-template-columns: 1fr; }
+        .titulo-cambiar-perfil { font-size: 26px; }
+        .tabla-cambio thead { display: none; }
+        .tabla-cambio tr { display: grid; grid-template-columns: 1fr; padding: 10px 14px; border-bottom: 1px solid var(--borde); }
+        .tabla-cambio td { border-bottom: 0; padding: 2px 0; }
+        .tabla-cambio .flecha { display: none; }
+        .tabla-cambio .despues::before { content: "→ "; color: var(--modelo); }
+        .cliente-alcance { padding-left: 0; }
+        .acciones-perfil .aplicar-perfil, .acciones-perfil .cancelar-perfil { width: 100%; justify-content: center; }
+      }
       .presets {
         display: flex;
         gap: 10px;
@@ -8539,6 +8640,7 @@
           controlDeRol,
         });
         raiz.append(cont);
+        abrirNuevoPerfilPedido(cont, accionesDePerfil);
         cont.append(el("h2", "Preset"));
 
         const presets = el("div", undefined, "presets");
@@ -9222,10 +9324,10 @@
         const botones = el("div", undefined, "perfil-acciones");
         const cambiar = el("button", "Cambiar de perfil", "boton-perfil");
         cambiar.type = "button";
-        // Hasta que exista `#/modelos/perfil` (R-AJU-004), se cambia con el selector de siempre (D-002).
+        // Lleva a la pantalla que muestra qué cambia antes de aplicar (R-AJU-004, D-009 de
+        // FEATURE-WEB-AJUSTES-CAMBIAR-PERFIL-20261014; reemplaza el atajo provisional D-002).
         cambiar.addEventListener("click", () => {
-          abrirAvanzado();
-          perfiles?.selectorDelProyecto?.focus();
+          location.hash = "#/modelos/perfil";
         });
         botones.append(cambiar);
         if (activo !== null && perfiles?.abrirEditor) {
@@ -9415,7 +9517,7 @@
        * son los que el archivo ya declara bajo `roles:` menos esa fase (D-004), y el archivo
        * solo se escribe al confirmar las diferencias.
        */
-      async function previsualizarVolver(rol, routing, zona) {
+      async function previsualizarVolver(rol, routing, zona, alTerminar = vistaModelos) {
         zona.textContent = "";
         const declarados = new Set(
           [...String(routing.text ?? "").matchAll(/^ {2}([a-z][a-z0-9-]*):/gm)].map((m) => m[1]),
@@ -9455,7 +9557,7 @@
           try {
             const r = await api("PUT", "/api/routing", { text: previa.text });
             if (r.routing?.written) {
-              await vistaModelos();
+              await alTerminar();
               return;
             }
             resultado.className = "resultado error";
@@ -9500,6 +9602,353 @@
         }
         seccion.append(tabla);
         return seccion;
+      }
+
+      // ── Modelos › Cambiar de perfil (R-AJU-004) ──────────────────────────
+
+      /** Los siete trabajos que reparte un perfil, en el orden del boceto. */
+      const TRABAJOS_DE_PERFIL = [...FASES_DE_MODELOS, ...ROLES_DE_COORDINACION.map(([rol, nombre]) => [rol, nombre])];
+      const ESTADO_DE_PROVEEDOR = { cli: "detectado", environment: "configurado", "credentials-file": "configurado" };
+      const CLAVE_NUEVO_PERFIL = "valmen-nuevo-perfil-desde";
+
+      /** La elección a medias: sobrevive al refresco en vivo y se olvida al navegar o aplicar (D-007). */
+      let eleccionDeCambioDePerfil = null;
+
+      const textoDeRuta = (ruta) =>
+        ruta ? `${ruta.model || "(sin modelo)"} · ${ESFUERZO_LEGIBLE[ruta.effort] ?? ruta.effort ?? "auto"}` : "(sin asignar)";
+      const mismaRuta = (a, b) =>
+        (a?.provider ?? "") === (b?.provider ?? "") &&
+        (a?.model ?? "") === (b?.model ?? "") &&
+        (a?.effort ?? "") === (b?.effort ?? "");
+      const unirConY = (lista) =>
+        lista.length <= 1 ? (lista[0] ?? "") : `${lista.slice(0, -1).join(", ")} y ${lista[lista.length - 1]}`;
+
+      /** El estado de un proveedor como lo dice la persona (D-006); nunca la clave. */
+      function estadoDeProveedor(proveedor) {
+        if (proveedor?.configured) return ESTADO_DE_PROVEEDOR[proveedor.source] ?? "configurado";
+        return "sin configurar";
+      }
+
+      /**
+       * «Nuevo perfil a partir del seleccionado» llega aquí desde Cambiar de perfil (D-004): abre
+       * «Avanzado» con el editor de siempre, que valida contra el catálogo antes de guardar.
+       */
+      function abrirNuevoPerfilPedido(avanzado, acciones) {
+        let id = null;
+        try {
+          id = sessionStorage.getItem(CLAVE_NUEVO_PERFIL);
+          sessionStorage.removeItem(CLAVE_NUEVO_PERFIL);
+        } catch {
+          id = null;
+        }
+        const base = (acciones?.datos?.perfiles ?? []).find((p) => p.id === id);
+        if (!base || !acciones?.abrirEditor) return;
+        avanzado.open = true;
+        acciones.abrirEditor(base, false);
+      }
+
+      /**
+       * Cambiar de perfil (`#/modelos/perfil`, boceto assets/modelos-cambiar-perfil.html): elegir no
+       * escribe nada; se ve antes qué trabajos cambian, cuáles no, qué fases del proyecto se quedan
+       * y dónde se aplica. Solo «Aplicar» escribe, con `PUT /api/perfiles/seleccion`.
+       */
+      async function vistaCambiarPerfil(conservar = false) {
+        if (!conservar) eleccionDeCambioDePerfil = null;
+        const raiz = $("contenido");
+        const leer = async (ruta) => {
+          try {
+            return (await api("GET", ruta)) ?? {};
+          } catch (fallo) {
+            if (fallo === RESPUESTA_DE_PROYECTO_OBSOLETA) throw fallo;
+            return {};
+          }
+        };
+        const [datosPerfiles, datosRouting, datosProveedores] = await Promise.all([
+          leer("/api/perfiles"),
+          leer("/api/routing"),
+          leer("/api/providers"),
+        ]);
+        const perfiles = Array.isArray(datosPerfiles.perfiles) ? datosPerfiles.perfiles : [];
+        const seleccion = datosPerfiles.seleccion ?? { proyecto: null, ejecutores: {} };
+        const ejecutores = Array.isArray(datosPerfiles.ejecutores) ? datosPerfiles.ejecutores : [];
+        const routing = datosRouting.routing ?? { roles: [], text: "", preset: "" };
+        const resueltas = new Map((routing.roles ?? []).map((r) => [r.role, r]));
+        const proveedores = new Map((datosProveedores.providers ?? []).map((p) => [p.id, p]));
+        const porId = (id) => perfiles.find((p) => p.id === id) ?? null;
+        // El perfil que rige hoy en el alcance elegido (D-001): el del cliente, si lo tiene.
+        const vigente = (e) =>
+          e.alcance === "cliente"
+            ? (seleccion.ejecutores?.[e.cliente] ?? seleccion.proyecto ?? null)
+            : (seleccion.proyecto ?? null);
+
+        let e = eleccionDeCambioDePerfil;
+        if (e === null || porId(e.perfil) === null) {
+          e = {
+            perfil: porId(seleccion.proyecto)?.id ?? perfiles[0]?.id ?? null,
+            alcance: "proyecto",
+            cliente: ejecutores.includes("claude") ? "claude" : (ejecutores[0] ?? ""),
+          };
+        }
+        eleccionDeCambioDePerfil = e;
+
+        const proveedoresDe = (perfil) => [
+          ...new Set(TRABAJOS_DE_PERFIL.map(([rol]) => perfil.roles?.[rol]?.provider).filter(Boolean)),
+        ];
+        const nombreDeProveedor = (id) => String(proveedores.get(id)?.name ?? id).replace(/\s*\(.*\)\s*$/, "");
+
+        const tarjetaDe = (perfil) => {
+          const elegida = perfil.id === e.perfil;
+          const activa = perfil.id === seleccion.proyecto;
+          const tarjeta = el("button", undefined, "tarjeta-perfil");
+          tarjeta.type = "button";
+          tarjeta.setAttribute("aria-pressed", elegida ? "true" : "false");
+          const cabecera = el("span", undefined, "cab-tarjeta-perfil");
+          cabecera.append(
+            el("span", perfil.id, "titulo-perfil"),
+            el("span", activa ? "activo" : elegida ? "seleccionado" : "", activa ? "marca-tarjeta activo" : "marca-tarjeta"),
+          );
+          const lista = el("span", undefined, "proveedores-tarjeta");
+          for (const id of proveedoresDe(perfil)) {
+            const linea = el("span", undefined, "proveedor-tarjeta");
+            if (proveedores.size === 0) {
+              linea.append(document.createTextNode(id));
+            } else {
+              const estado = estadoDeProveedor(proveedores.get(id));
+              const punto = el("span", undefined, estado === "sin configurar" ? "punto-proveedor falta" : "punto-proveedor");
+              punto.setAttribute("aria-hidden", "true");
+              linea.append(punto, document.createTextNode(`${id} · ${estado}`));
+            }
+            lista.append(linea);
+          }
+          tarjeta.append(
+            cabecera,
+            el("span", perfil.origen === "proyecto" ? "del proyecto" : "incorporado", "origen-tarjeta"),
+            el("span", perfil.description ?? "", "desc-tarjeta"),
+            lista,
+          );
+          tarjeta.addEventListener("click", () => {
+            e.perfil = perfil.id;
+            pintar();
+          });
+          return tarjeta;
+        };
+
+        const seccionDelCambio = (elegido, actual) => {
+          const ahora = (rol) => (actual ? actual.roles?.[rol] : resueltas.get(rol));
+          const filas = [];
+          const igualesDelAgente = [];
+          const compuertasIguales = [];
+          for (const [rol, nombre] of TRABAJOS_DE_PERFIL) {
+            if (mismaRuta(ahora(rol), elegido.roles?.[rol])) igualesDelAgente.push(nombre);
+            else filas.push([rol, nombre]);
+          }
+          for (const [rol, nombre] of ROLES_DE_COMPUERTAS) {
+            if (mismaRuta(ahora(rol), elegido.roles?.[rol])) compuertasIguales.push(rol);
+            else filas.push([rol, nombre]);
+          }
+
+          const seccion = el("section", undefined, "que-cambia");
+          seccion.setAttribute("aria-labelledby", "t-que-cambia");
+          const titulo = el("h2", "Qué cambia con ");
+          titulo.id = "t-que-cambia";
+          titulo.append(el("span", elegido.id, "id-elegido"));
+          const caja = el("div", undefined, "caja-cambio");
+          if (filas.length > 0) {
+            const tabla = el("table", undefined, "tabla-cambio");
+            const thead = el("thead");
+            const cabecera = el("tr");
+            const paso = el("th");
+            paso.setAttribute("aria-label", "pasa a");
+            cabecera.append(el("th", "Trabajo"), el("th", "Ahora"), paso, el("th", "Después"));
+            thead.append(cabecera);
+            const tbody = el("tbody");
+            for (const [rol, nombre] of filas) {
+              const tr = el("tr", undefined, "fila-cambio");
+              const flecha = el("td", "→", "flecha");
+              flecha.setAttribute("aria-hidden", "true");
+              tr.append(
+                el("td", nombre, "trabajo-cambio"),
+                el("td", textoDeRuta(ahora(rol)), "antes"),
+                flecha,
+                el("td", textoDeRuta(elegido.roles?.[rol]), "despues"),
+              );
+              tbody.append(tr);
+            }
+            tabla.append(thead, tbody);
+            caja.append(tabla);
+          }
+          // Lo que no cambia, en una nota (D-008): las compuertas y, si los hay, los trabajos iguales.
+          const notas = [];
+          if (filas.length === 0) notas.push("Los dos perfiles asignan los mismos modelos: no cambia ningún trabajo.");
+          if (compuertasIguales.length > 0 && filas.length > 0) {
+            const donde = [];
+            if (compuertasIguales.some((rol) => /jev/i.test(String(ahora(rol)?.model ?? "")))) donde.push("Jev");
+            for (const id of new Set(compuertasIguales.map((rol) => ahora(rol)?.provider).filter(Boolean))) {
+              donde.push(nombreDeProveedor(id));
+            }
+            const todas = compuertasIguales.length === ROLES_DE_COMPUERTAS.length;
+            notas.push(
+              compuertasIguales.length === 1
+                ? `La compuerta restante no cambia: sigue en ${unirConY(donde)}.`
+                : `Las ${compuertasIguales.length} compuertas y revisiones ${todas ? "" : "restantes "}no cambian: siguen en ${unirConY(donde)}.`,
+            );
+          }
+          if (igualesDelAgente.length > 0 && filas.length > 0) notas.push(`Tampoco cambia: ${unirConY(igualesDelAgente)}.`);
+          if (notas.length > 0) caja.append(el("div", notas.join(" "), "nota-cambio"));
+          seccion.append(titulo, caja);
+
+          // Las fases definidas en el proyecto ganan al perfil y se quedan (D-008, D-005).
+          for (const [rol, nombre] of filas) {
+            if (resueltas.get(rol)?.source !== "proyecto") continue;
+            const aviso = el("div", undefined, "aviso-fase");
+            const punto = el("span", undefined, "punto-aviso");
+            punto.setAttribute("aria-hidden", "true");
+            const femenino = /ción\b|^Especificación/.test(nombre);
+            const texto = el("span", undefined, "texto-aviso-fase");
+            texto.append(
+              el("b", nombre),
+              document.createTextNode(` está ${femenino ? "cambiada" : "cambiado"} en este proyecto y se queda como está. `),
+            );
+            const zona = el("div", undefined, "volver-perfil");
+            const seguir = el("button", "Que también siga al perfil", "enlace-modelos");
+            seguir.type = "button";
+            seguir.addEventListener(
+              "click",
+              () => void previsualizarVolver(rol, routing, zona, () => vistaCambiarPerfil(true)),
+            );
+            texto.append(seguir);
+            aviso.append(punto, texto, zona);
+            seccion.append(aviso);
+          }
+          return seccion;
+        };
+
+        const seccionDelAlcance = () => {
+          const campo = el("fieldset", undefined, "alcance-perfil");
+          campo.append(el("legend", "Dónde se aplica"));
+          const opcion = (valor, titulo, detalle, recomendado) => {
+            const etiqueta = el("label", undefined, "opcion-alcance");
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = "alcance-perfil";
+            radio.value = valor;
+            radio.checked = e.alcance === valor;
+            radio.addEventListener("change", () => {
+              if (!radio.checked) return;
+              e.alcance = valor;
+              pintar();
+            });
+            const texto = el("span");
+            texto.append(el("b", titulo));
+            if (recomendado) texto.append(document.createTextNode(" "), el("span", "recomendado", "recomendado"));
+            texto.append(el("span", detalle, "detalle-alcance"));
+            etiqueta.append(radio, texto);
+            return etiqueta;
+          };
+          campo.append(
+            opcion("proyecto", "Todo el proyecto", "Cualquier cliente con el que trabajes usa este perfil.", true),
+            opcion(
+              "cliente",
+              "Solo cuando trabajo con un cliente",
+              "El proyecto sigue con su perfil; este se usa solo con el cliente elegido.",
+              false,
+            ),
+          );
+          // Sin cliente no hay `ejecutor` que mandar: el selector aparece con esa opción (D-003).
+          if (e.alcance === "cliente") {
+            const etiqueta = el("label", "Cliente", "cliente-alcance");
+            const selector = document.createElement("select");
+            for (const id of ejecutores) selector.append(new Option(NOMBRE_DE_CLIENTE[id] ?? id, id));
+            selector.value = e.cliente;
+            selector.addEventListener("change", () => {
+              e.cliente = selector.value;
+              pintar();
+            });
+            etiqueta.append(selector);
+            campo.append(etiqueta);
+          }
+          return campo;
+        };
+
+        const accionesDe = (elegido) => {
+          const acciones = el("div", undefined, "acciones-perfil");
+          const aplicar = el("button", `Aplicar ${elegido.id}`, "aplicar-perfil");
+          aplicar.type = "button";
+          const cancelar = el("a", "Cancelar", "cancelar-perfil");
+          cancelar.href = "#/modelos";
+          const resultado = el("div", undefined, "resultado");
+          aplicar.addEventListener("click", async () => {
+            aplicar.disabled = true;
+            resultado.className = "resultado";
+            resultado.textContent = "Aplicando el perfil…";
+            try {
+              const cuerpo =
+                e.alcance === "cliente" && e.cliente !== ""
+                  ? { perfil: elegido.id, ejecutor: e.cliente }
+                  : { perfil: elegido.id };
+              const r = await api("PUT", "/api/perfiles/seleccion", cuerpo);
+              if (r?.written) {
+                eleccionDeCambioDePerfil = null;
+                void marcarPerfilActivo();
+                location.hash = "#/modelos";
+                return;
+              }
+              resultado.className = "resultado error";
+              resultado.textContent = (r?.errores ?? ["No se aplicó el perfil."]).join(" ");
+            } catch (fallo) {
+              if (fallo === RESPUESTA_DE_PROYECTO_OBSOLETA) return;
+              resultado.className = "resultado error";
+              resultado.textContent = fallo.message;
+            }
+            aplicar.disabled = false;
+          });
+          acciones.append(aplicar, cancelar, resultado);
+          return acciones;
+        };
+
+        const pintar = () => {
+          raiz.textContent = "";
+          const pagina = el("div", undefined, "cambiar-perfil");
+          const miga = el("nav", undefined, "miga-perfil");
+          miga.setAttribute("aria-label", "Ruta");
+          const volver = el("a", "Ajustes · Modelos");
+          volver.href = "#/modelos";
+          const separador = el("span", " › ");
+          separador.setAttribute("aria-hidden", "true");
+          miga.append(volver, separador, document.createTextNode("Cambiar de perfil"));
+          pagina.append(miga, el("h1", "Elige un perfil y mira qué cambia antes de aplicarlo", "titulo-cambiar-perfil"));
+
+          const rejilla = el("div", undefined, "rejilla-perfiles");
+          for (const perfil of perfiles) rejilla.append(tarjetaDe(perfil));
+          const nueva = el("button", undefined, "tarjeta-nueva");
+          nueva.type = "button";
+          const mas = el("span", "+", "mas");
+          mas.setAttribute("aria-hidden", "true");
+          nueva.append(mas, el("span", "Nuevo perfil", "nueva-titulo"), el("span", "a partir del seleccionado"));
+          nueva.addEventListener("click", () => {
+            try {
+              if (e.perfil !== null) sessionStorage.setItem(CLAVE_NUEVO_PERFIL, e.perfil);
+            } catch {
+              // Sin almacenamiento, Modelos abre sin el editor: se crea desde «Avanzado».
+            }
+            location.hash = "#/modelos";
+          });
+          rejilla.append(nueva);
+          pagina.append(rejilla);
+
+          const elegido = porId(e.perfil);
+          if (elegido === null) {
+            pagina.append(el("div", "No hay perfiles para elegir.", "ya-activo"));
+          } else if (elegido.id === vigente(e)) {
+            pagina.append(el("div", "Este ya es el perfil activo. Elige otro para ver qué cambiaría.", "ya-activo"));
+            // Con un cliente elegido, el alcance sigue a la vista para poder volver al proyecto.
+            if (e.alcance === "cliente") pagina.append(seccionDelAlcance());
+          } else {
+            pagina.append(seccionDelCambio(elegido, porId(vigente(e))), seccionDelAlcance(), accionesDe(elegido));
+          }
+          raiz.append(pagina);
+        };
+        pintar();
       }
 
       // ── Vista: configuración ──────────────────────────────────────────────
@@ -10717,6 +11166,8 @@
             abrirPedirCambio();
             await vistaTickets();
           } else if (nombre === "inicio") await vistaInicio();
+          else if (nombre === "modelos" && parametro === "perfil")
+            await vistaCambiarPerfil(opciones.conservarVista === true);
           else if (nombre === "modelos") await vistaModelos();
           else if (nombre === "proyecto" || nombre === "configuracion")
             await vistaConfiguracion();
