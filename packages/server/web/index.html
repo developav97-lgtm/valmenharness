@@ -753,6 +753,249 @@
           grid-template-columns: minmax(0, 1fr);
         }
       }
+      /* Procesos (R-VIVO-003), como el boceto `assets/procesos.html`: las corridas detenidas
+         primero, en ámbar porque esperan a una persona; después una tarjeta por proceso. Solo
+         tokens, y el prefijo `proc-` propio: otras vistas del mismo archivo se editan en paralelo. */
+      .proc {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        max-width: 1240px;
+      }
+      .proc-titulos {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .proc-migas {
+        font-family: var(--mono);
+        font-size: 13px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--codigo);
+      }
+      .proc-migas span {
+        color: var(--tenue);
+      }
+      .proc h1 {
+        margin: 0;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 38px;
+        line-height: 1.08;
+      }
+      .proc-bajada {
+        margin: 0;
+        max-width: 70ch;
+        color: var(--tenue);
+        font-size: 16px;
+      }
+      .proc h2.proc-h2 {
+        margin: 0;
+        color: var(--texto);
+        text-transform: none;
+        letter-spacing: normal;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 22px;
+      }
+      .proc-tarjeta,
+      .proc-detenida {
+        min-width: 0;
+        padding: 20px 22px;
+        border-radius: 14px;
+        border: 1px solid var(--borde);
+        background: var(--panel);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .proc-detenida {
+        border-color: var(--persona);
+      }
+      .proc-detenida h2.proc-h2 {
+        color: var(--persona);
+      }
+      .proc-cabeza {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 10px 12px;
+      }
+      .proc-sub,
+      .proc-id {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--tenue);
+        overflow-wrap: anywhere;
+      }
+      .proc-tarjeta .proc-nombre {
+        flex: 1;
+        min-width: 0;
+        font-family: var(--fuente-titulo);
+        font-weight: 600;
+        font-size: 20px;
+      }
+      ol.proc-pasos {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+      .proc-paso {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--borde);
+        background: var(--fondo-2);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .proc-detenida .proc-paso {
+        color: var(--tenue);
+      }
+      .proc-detenida .proc-paso.proc-paso-hecho {
+        color: var(--hecho);
+      }
+      .proc-paso.proc-paso-actual,
+      .proc-paso.proc-paso-persona {
+        border-color: var(--persona);
+        color: var(--persona);
+      }
+      .proc-detenida .proc-paso.proc-paso-actual {
+        color: var(--persona);
+      }
+      .proc-punto {
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--persona);
+      }
+      .proc-sep {
+        color: var(--tenue-deco);
+      }
+      .proc-acciones {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 10px;
+      }
+      .proc-campo {
+        flex: 1 1 220px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13.5px;
+        color: var(--tenue);
+      }
+      .proc-campo.proc-campo-responsable {
+        flex: 0 1 220px;
+      }
+      .proc-campo input {
+        width: 100%;
+        height: 42px;
+        padding: 0 12px;
+        border-radius: 10px;
+        border: 1px solid var(--borde);
+        background: var(--fondo-2);
+        color: var(--texto);
+        font: inherit;
+      }
+      .proc-campo input.proc-frase {
+        font-family: var(--mono);
+      }
+      .proc button.proc-boton {
+        min-height: 40px;
+        padding: 0 16px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .proc button.proc-aprobar {
+        background: var(--persona);
+        border-color: var(--persona);
+        color: var(--sobre-acento);
+      }
+      .proc button.proc-tenue {
+        border-color: transparent;
+        background: none;
+        color: var(--tenue);
+      }
+      .proc-nota,
+      .proc-pide {
+        margin: 0;
+        font-size: 13.5px;
+        color: var(--tenue);
+      }
+      .proc-nota.proc-error {
+        color: var(--error);
+      }
+      .proc-nota.proc-ok {
+        color: var(--ok);
+      }
+      .proc code,
+      .proc-comando {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        overflow-wrap: anywhere;
+      }
+      .proc-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: var(--fondo-2);
+        font-size: 13px;
+      }
+      .proc-panel[hidden] {
+        display: none;
+      }
+      .proc-tarjetas {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+        gap: 14px;
+      }
+      .proc-seccion {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      details.proc-mas {
+        min-width: 0;
+        border-top: 1px solid var(--borde);
+        padding-top: 12px;
+      }
+      details.proc-mas > summary {
+        cursor: pointer;
+        color: var(--tenue);
+        font-size: 14px;
+      }
+      .proc-tabla {
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      @media (max-width: 480px) {
+        .proc h1 {
+          font-size: 28px;
+        }
+        .proc-tarjeta,
+        .proc-detenida {
+          padding: 16px;
+        }
+        .proc-campo.proc-campo-responsable {
+          flex-basis: 100%;
+        }
+      }
       /* Inicio (R-MARCO-005): lo que espera una decisión de la persona, como el boceto
          `assets/inicio.html`. Solo tokens: el ámbar es «decide una persona», el lila
          «trabaja un modelo», el cian «decide el código» y el verde «hecho». */
@@ -9333,16 +9576,291 @@
       // ── Vista: procesos ───────────────────────────────────────────────────
       //
       // Responde a la pregunta que un proceso detenido deja abierta: «¿hay algo
-      // que hacer?». Las corridas esperando van primero, y el gate se aprueba
-      // desde aquí —que es lo que obligaba a abrir la terminal—.
+      // que hacer?». Como el boceto `assets/procesos.html` (R-VIVO-003): primero un
+      // bloque ámbar por corrida detenida, con sus pasos y la aprobación con la frase
+      // exacta; después una tarjeta por proceso; al final, plegado, lo que la vista
+      // mostraba antes. Todo ayudante lleva el prefijo `procesos`: otras vistas del
+      // mismo archivo se editan en paralelo.
 
-      /** El responsable de aprobar un gate: se recuerda entre visitas. */
-      function responsableDeAprobacion() {
+      /** Lo que dijo la última aprobación: sobrevive al repintado que la sigue. */
+      let procesosAviso = null;
+
+      /** El responsable de aprobar: el mismo que recuerdan las otras aprobaciones. */
+      function procesosResponsable() {
         return responsable;
       }
 
-      async function aprobarGate(gate, boton, salida) {
-        const actor = responsableDeAprobacion();
+      /** La ruta de aprobación de un gate, sin plantilla: es la ruta ya declarada. */
+      function procesosRutaDeAprobar(gate) {
+        return "/api/processes/gates/" + encodeURIComponent(gate) + "/approve";
+      }
+
+      /** Un botón que pliega o despliega un panel, con su `aria-expanded`. */
+      function procesosPlegable(texto, clase, panel) {
+        const boton = el("button", texto, `proc-boton ${clase}`);
+        boton.type = "button";
+        boton.setAttribute("aria-expanded", "false");
+        panel.hidden = true;
+        boton.addEventListener("click", () => {
+          const abrir = panel.hidden;
+          panel.hidden = !abrir;
+          boton.setAttribute("aria-expanded", abrir ? "true" : "false");
+        });
+        return boton;
+      }
+
+      /**
+       * Los pasos de un proceso como fichas. Con una corrida, los hechos llevan ✓, el pendiente
+       * lleva `aria-current="step"` y los que faltan quedan sin marca; sin corrida, los pasos que
+       * aprueba una persona (`kind: gate`) van en ámbar.
+       */
+      function procesosPasos(pasos, corrida) {
+        const lista = el("ol", undefined, "proc-pasos");
+        lista.setAttribute("aria-label", corrida === undefined ? "Pasos" : "Pasos de la corrida");
+        const hechos = new Set(
+          (corrida?.steps ?? []).filter((paso) => paso.status === "ok").map((paso) => paso.id),
+        );
+        pasos.forEach((paso, i) => {
+          if (i > 0) {
+            const flecha = el("li", "→", "proc-sep");
+            flecha.setAttribute("aria-hidden", "true");
+            lista.append(flecha);
+          }
+          const ficha = el("li", undefined, "proc-paso");
+          if (corrida !== undefined && paso.id === corrida.pendingStep) {
+            ficha.classList.add("proc-paso-actual");
+            ficha.setAttribute("aria-current", "step");
+            const punto = el("span", undefined, "proc-punto");
+            punto.setAttribute("aria-hidden", "true");
+            ficha.append(punto, document.createTextNode(paso.title));
+          } else if (corrida !== undefined && hechos.has(paso.id)) {
+            ficha.classList.add("proc-paso-hecho");
+            ficha.textContent = `✓ ${paso.title}`;
+          } else {
+            if (corrida === undefined && paso.kind === "gate") ficha.classList.add("proc-paso-persona");
+            ficha.textContent = paso.title;
+          }
+          lista.append(ficha);
+        });
+        return lista;
+      }
+
+      /** Los pasos de un proceso, o los de la corrida si la respuesta no trae la lista. */
+      function procesosPasosDe(proceso, corrida) {
+        if (Array.isArray(proceso?.stepList) && proceso.stepList.length > 0) return proceso.stepList;
+        return (corrida?.steps ?? []).map((paso) => ({ id: paso.id, title: paso.id, kind: "", gate: null }));
+      }
+
+      /** «Pide: …» con las descripciones de los parámetros (D11). */
+      function procesosPide(proceso) {
+        const lista = Array.isArray(proceso.paramList) ? proceso.paramList : [];
+        if (lista.length === 0) return "No pide parámetros";
+        const partes = lista.map((param) => {
+          const base = (param.description ?? param.name).trim().replace(/\.$/, "");
+          const texto = base.charAt(0).toLowerCase() + base.slice(1);
+          return param.required ? texto : `${texto} (opcional)`;
+        });
+        return `Pide: ${partes.join("; ")}`;
+      }
+
+      /** El comando para lanzar el proceso desde la terminal (D6): la pantalla no lanza nada. */
+      function procesosComando(proceso) {
+        const lista = Array.isArray(proceso.paramList) ? proceso.paramList : [];
+        const partes = [`valmen process run ${proceso.id}`];
+        for (const param of lista) {
+          const bandera = `--${param.name} <${param.name}>`;
+          partes.push(param.required ? bandera : `[${bandera}]`);
+        }
+        return partes.join(" ");
+      }
+
+      /** El botón de aprobar del bloque solo se habilita con responsable y la frase exigida. */
+      function procesosPuedeAprobar(corrida, actor, frase) {
+        if (actor.trim() === "") return false;
+        if (corrida.requiredPhrase) return frase.trim() === corrida.requiredPhrase;
+        return frase.trim() !== "";
+      }
+
+      async function procesosAprobar(corrida, actor, frase, boton, salida) {
+        if (actor.trim() === "") {
+          salida.className = "proc-nota proc-error";
+          salida.textContent =
+            "Falta el responsable. Escríbelo: aprobar sin nombre no es auditable.";
+          return;
+        }
+        if (!procesosPuedeAprobar(corrida, actor, frase)) {
+          salida.className = "proc-nota proc-error";
+          salida.textContent = corrida.requiredPhrase
+            ? `La frase no coincide: escribe exactamente «${corrida.requiredPhrase}».`
+            : "Escribe tu aprobación con tus palabras.";
+          return;
+        }
+        boton.disabled = true;
+        const textoAntes = boton.textContent;
+        boton.textContent = "Aprobando…";
+        guardarResponsable(actor.trim());
+        // La frase exigida viaja como `phrase` con la corrida; sin frase exigida, las
+        // palabras de la persona quedan como motivo (D2).
+        const cuerpo = corrida.requiredPhrase
+          ? { actor: actor.trim(), run: corrida.runId, phrase: frase.trim(), reason: "" }
+          : { actor: actor.trim(), run: corrida.runId, reason: frase.trim() };
+        try {
+          const r = await api("POST", procesosRutaDeAprobar(corrida.pendingGate), cuerpo);
+          procesosAviso =
+            `${r.details ?? "Aprobado."} El proceso no continúa solo: retómalo con ` +
+            `valmen process resume ${corrida.runId} desde la terminal.`;
+          await vistaProcesos();
+        } catch (fallo) {
+          salida.className = "proc-nota proc-error";
+          salida.textContent = fallo.message;
+          boton.textContent = textoAntes;
+          boton.disabled = !procesosPuedeAprobar(corrida, actor, frase);
+        }
+      }
+
+      /** El bloque ámbar de una corrida detenida (R-VIVO-003). */
+      function procesosBloqueDetenida(corrida, proceso) {
+        const bloque = el("section", undefined, "proc-detenida");
+        const cabeza = el("div", undefined, "proc-cabeza");
+        const version = corrida.params?.version;
+        cabeza.append(
+          el("h2", "Detenido: espera tu aprobación", "proc-h2"),
+          el(
+            "span",
+            `${corrida.processId} · ${version === undefined ? corrida.runId : `v${version}`}`,
+            "proc-sub",
+          ),
+        );
+        bloque.append(cabeza, procesosPasos(procesosPasosDe(proceso, corrida), corrida));
+
+        // El dry-run: lo que ya corrió antes de detenerse, con su comando (D5).
+        const panel = el("div", undefined, "proc-panel proc-dryrun");
+        const hechos = (corrida.steps ?? []).filter((paso) => paso.status !== "waiting");
+        if (hechos.length === 0) panel.append(el("div", "Todavía no corrió ningún paso."));
+        for (const paso of hechos) {
+          const fila = el("div");
+          fila.append(
+            el("span", `${paso.status === "ok" ? "✓" : "✗"} ${paso.id} · ${String(paso.at ?? "").slice(0, 19).replace("T", " ")} · `),
+            el("code", paso.detail ?? ""),
+          );
+          panel.append(fila);
+        }
+        panel.append(el("div", "La salida no se guarda: se ve en la terminal mientras corre.", "proc-nota"));
+        const verDryRun = procesosPlegable("Ver dry-run", "proc-ver-dryrun", panel);
+
+        const acciones = el("div", undefined, "proc-acciones");
+        if (corrida.gateApprovedBy) {
+          // Aprobada para esta corrida: falta retomarla, y eso no se hace desde aquí.
+          const aviso = el("p", `Aprobado por ${corrida.gateApprovedBy} · falta retomar: `, "proc-nota proc-ok proc-aprobada");
+          aviso.append(el("code", `valmen process resume ${corrida.runId}`));
+          acciones.append(aviso, verDryRun);
+          bloque.append(acciones, panel);
+          return bloque;
+        }
+        if (!corrida.pendingGate) {
+          const aviso = el("p", "Esta corrida no espera un gate que se apruebe aquí. Retómala con ", "proc-nota");
+          aviso.append(el("code", `valmen process resume ${corrida.runId}`));
+          acciones.append(aviso, verDryRun);
+          bloque.append(acciones, panel);
+          return bloque;
+        }
+
+        const campoActor = el("label", "Responsable", "proc-campo proc-campo-responsable");
+        const actor = el("input", undefined, "proc-responsable");
+        actor.type = "text";
+        actor.autocomplete = "name";
+        actor.placeholder = "Tu nombre";
+        actor.value = procesosResponsable();
+        campoActor.append(actor);
+
+        const etiqueta = corrida.requiredPhrase
+          ? `Escribe la frase de aprobación: ${corrida.requiredPhrase}`
+          : "Escribe tu aprobación con tus palabras";
+        const campoFrase = el("label", etiqueta, "proc-campo");
+        const frase = el("input", undefined, "proc-frase");
+        frase.type = "text";
+        frase.autocomplete = "off";
+        frase.spellcheck = false;
+        frase.placeholder = corrida.requiredPhrase ?? "Apruebo tras revisar el dry-run";
+        campoFrase.append(frase);
+
+        const boton = el(
+          "button",
+          corrida.pendingGate === "deploy" ? "Aprobar despliegue" : "Aprobar",
+          "proc-boton proc-aprobar",
+        );
+        boton.type = "button";
+        const salida = el("p", "", "proc-nota");
+        salida.setAttribute("aria-live", "polite");
+        const actualizar = () => {
+          boton.disabled = !procesosPuedeAprobar(corrida, actor.value, frase.value);
+        };
+        actor.addEventListener("input", actualizar);
+        frase.addEventListener("input", actualizar);
+        actor.addEventListener("change", () => guardarResponsable(actor.value.trim()));
+        boton.addEventListener("click", () => void procesosAprobar(corrida, actor.value, frase.value, boton, salida));
+        actualizar();
+        // Un botón deshabilitado no recibe el clic en el navegador: el motivo se dice antes.
+        if (actor.value.trim() === "") salida.textContent = "Falta el responsable para poder aprobar.";
+        actor.addEventListener("input", () => {
+          if (actor.value.trim() !== "" && salida.textContent === "Falta el responsable para poder aprobar.") salida.textContent = "";
+        });
+
+        acciones.append(campoActor, campoFrase, boton, verDryRun);
+        bloque.append(acciones, salida, panel);
+        return bloque;
+      }
+
+      /** Una corrida en el historial de un proceso. */
+      function procesosFilaDeCorrida(corrida) {
+        const hechos = (corrida.steps ?? []).filter((paso) => paso.status === "ok").length;
+        const fila = el("div");
+        fila.append(
+          el("code", corrida.runId),
+          el(
+            "span",
+            ` · ${corrida.status} · ${hechos}/${(corrida.steps ?? []).length} pasos · ${String(corrida.updatedAt ?? "").slice(0, 19).replace("T", " ")}`,
+          ),
+        );
+        if (corrida.reason) fila.append(el("div", corrida.reason, "proc-nota"));
+        return fila;
+      }
+
+      /** La tarjeta de un proceso declarado. */
+      function procesosTarjeta(proceso, corridas) {
+        const tarjeta = el("article", undefined, "proc-tarjeta");
+        const cabeza = el("div", undefined, "proc-cabeza");
+        cabeza.append(el("b", proceso.title, "proc-nombre"), el("span", proceso.id, "proc-id"));
+        tarjeta.append(cabeza);
+        if (proceso.invalid !== null && proceso.invalid !== undefined) {
+          // Un proceso que no se puede leer no se esconde (D12).
+          tarjeta.append(el("p", proceso.invalid, "proc-nota proc-error"), el("p", proceso.path ?? "", "proc-id"));
+          return tarjeta;
+        }
+        tarjeta.append(procesosPasos(procesosPasosDe(proceso)), el("p", procesosPide(proceso), "proc-pide"));
+
+        const panelComando = el("div", undefined, "proc-panel");
+        panelComando.append(
+          el("code", procesosComando(proceso), "proc-comando"),
+          el("div", "Se ejecuta desde la terminal: la pantalla no lanza procesos.", "proc-nota"),
+        );
+        const propias = corridas.filter((corrida) => corrida.processId === proceso.id);
+        const panelCorridas = el("div", undefined, "proc-panel proc-corridas");
+        if (propias.length === 0) panelCorridas.append(el("div", "Sin corridas registradas.", "proc-nota"));
+        for (const corrida of propias) panelCorridas.append(procesosFilaDeCorrida(corrida));
+
+        const acciones = el("div", undefined, "proc-acciones");
+        acciones.append(
+          procesosPlegable("Ejecutar", "proc-ejecutar", panelComando),
+          procesosPlegable("Historial", "proc-historial proc-tenue", panelCorridas),
+        );
+        tarjeta.append(acciones, panelComando, panelCorridas);
+        return tarjeta;
+      }
+
+      /** Aprueba desde «Más detalle» un gate que no exige frase, como hacía la tabla de siempre. */
+      async function procesosAprobarGate(gate, boton, salida) {
+        const actor = procesosResponsable();
         if (actor.trim() === "") {
           salida.className = "resultado error";
           salida.textContent =
@@ -9352,21 +9870,207 @@
         boton.disabled = true;
         boton.textContent = "Aprobando…";
         try {
-          const r = await api("POST", `/api/processes/gates/${gate}/approve`, { actor });
-          salida.className = "resultado ok";
-          // Se dice que aprobar no retoma: es la confusión natural, y mejor
-          // deshacerla aquí que dejar a alguien esperando a que el proceso siga.
-          salida.textContent =
-            `${r.details} El proceso **no** continúa solo: retómalo con ` +
-            "`valmen process resume` (o desde la terminal) cuando quieras seguir.";
+          const r = await api("POST", procesosRutaDeAprobar(gate), { actor });
+          procesosAviso =
+            `${r.details ?? "Aprobado."} El proceso no continúa solo: retómalo con ` +
+            "valmen process resume cuando quieras seguir.";
           await vistaProcesos();
         } catch (fallo) {
           salida.className = "resultado error";
           salida.textContent = fallo.message;
-        } finally {
           boton.disabled = false;
           boton.textContent = "Aprobar";
         }
+      }
+
+      /** Una tabla con su cabecera, dentro de una caja que se desplaza sola en el celular. */
+      function procesosTabla(columnas, filas) {
+        const caja = el("div", undefined, "proc-tabla");
+        const tabla = el("table");
+        const thead = el("thead");
+        const fila = el("tr");
+        for (const columna of columnas) fila.append(el("th", columna));
+        thead.append(fila);
+        const tbody = el("tbody");
+        for (const tr of filas) tbody.append(tr);
+        tabla.append(thead, tbody);
+        caja.append(tabla);
+        return caja;
+      }
+
+      /**
+       * Lo que la vista mostraba antes del boceto, plegado (D9): las cifras, el responsable,
+       * la tabla de gates con su botón, la de corridas y la de procesos. No se pierde nada.
+       */
+      function procesosMasDetalle(datos) {
+        const mas = el("details", undefined, "proc-mas");
+        mas.append(el("summary", "Más detalle"));
+        const r = datos.summary ?? {};
+        const procesos = Array.isArray(datos.processes) ? datos.processes : [];
+        const corridas = Array.isArray(datos.runs) ? datos.runs : [];
+        const gates = Array.isArray(datos.gates) ? datos.gates : [];
+
+        const tarjetas = el("div", undefined, "tarjetas");
+        const metricas = [
+          ["Procesos", r.processes ?? procesos.length],
+          ["Detenidos", r.waiting ?? 0],
+          ["Gates sin aprobar", r.gatesPending ?? 0],
+          ["Corridas", r.runs ?? corridas.length],
+        ];
+        if ((r.invalid ?? 0) > 0) metricas.push(["Inválidos", r.invalid]);
+        for (const [rotulo, valor] of metricas) {
+          const tarjeta = el("div", undefined, "tarjeta");
+          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
+          tarjetas.append(tarjeta);
+        }
+        mas.append(tarjetas);
+
+        const barra = el("div", undefined, "responsable");
+        const etiqueta = el("label", "Responsable de las aprobaciones");
+        etiqueta.htmlFor = "responsable-procesos";
+        const entrada = document.createElement("input");
+        entrada.type = "text";
+        entrada.id = "responsable-procesos";
+        entrada.placeholder = "Tu nombre";
+        entrada.value = procesosResponsable();
+        entrada.style.maxWidth = "260px";
+        entrada.addEventListener("change", () => guardarResponsable(entrada.value));
+        barra.append(etiqueta, entrada, el("span", "Queda registrado con cada aprobación.", "resultado"));
+        mas.append(barra);
+
+        if (gates.length > 0) {
+          mas.append(el("h2", "Gates de proceso"));
+          const filas = gates.map((gate) => {
+            const tr = el("tr");
+            const celda = el("td");
+            celda.append(el("div", gate.gate, "nombre"));
+            if (gate.reason) celda.append(el("div", gate.reason, "descripcion"));
+            tr.append(celda, el("td", gate.processId, "id"));
+            const celdaEstado = el("td");
+            if (gate.requiresPhrase) celdaEstado.append(el("span", "por corrida", "etiqueta"));
+            else if (gate.approvedBy === null) celdaEstado.append(el("span", "sin aprobar", "etiqueta critico"));
+            else celdaEstado.append(el("span", "aprobado", "etiqueta aprueba"));
+            tr.append(celdaEstado, el("td", gate.approvedBy ?? "—", "descripcion"));
+            const celdaAcciones = el("td");
+            if (gate.requiresPhrase) {
+              // Un gate con frase solo se aprueba para su corrida detenida: el botón de
+              // siempre lo mandaba sin corrida y el motor lo rechazaba.
+              celdaAcciones.append(el("div", "Se aprueba en su corrida detenida, con la frase.", "descripcion"));
+            } else if (gate.approvedBy === null) {
+              const salida = el("div", undefined, "resultado");
+              const boton = el("button", "Aprobar");
+              boton.type = "button";
+              boton.addEventListener("click", () => void procesosAprobarGate(gate.gate, boton, salida));
+              celdaAcciones.append(boton, salida);
+            }
+            tr.append(celdaAcciones);
+            return tr;
+          });
+          mas.append(procesosTabla(["Gate", "Proceso", "Estado", "Aprobado por", ""], filas));
+        }
+
+        mas.append(el("h2", "Corridas"));
+        if (corridas.length === 0) {
+          mas.append(el("div", "Ninguna corrida registrada todavía.", "resultado"));
+        } else {
+          const CLASE = { waiting: "critico", failed: "roto", completed: "aprueba", abandoned: "" };
+          const filas = corridas.map((corrida) => {
+            const tr = el("tr", undefined, corrida.status === "waiting" ? "planeado" : "");
+            const celda = el("td");
+            celda.append(el("div", corrida.runId, "id"));
+            if (corrida.pendingStep !== null) celda.append(el("div", `esperando en ${corrida.pendingStep}`, "descripcion"));
+            else if (corrida.reason !== null) celda.append(el("div", corrida.reason, "descripcion"));
+            tr.append(celda, el("td", corrida.processId, "id"));
+            const celdaEstado = el("td");
+            celdaEstado.append(el("span", corrida.status, `etiqueta ${CLASE[corrida.status] ?? ""}`));
+            tr.append(celdaEstado);
+            const hechos = (corrida.steps ?? []).filter((paso) => paso.status === "ok").length;
+            tr.append(
+              el("td", `${hechos}/${(corrida.steps ?? []).length}`, "id"),
+              el("td", String(corrida.updatedAt ?? "").slice(0, 19).replace("T", " "), "id"),
+            );
+            return tr;
+          });
+          mas.append(procesosTabla(["Corrida", "Proceso", "Estado", "Pasos", "Actualizada"], filas));
+        }
+
+        mas.append(el("h2", "Procesos"));
+        const filas = procesos.map((proceso) => {
+          const tr = el("tr");
+          const celda = el("td");
+          celda.append(el("div", proceso.title, "nombre"), el("div", proceso.id, "id"));
+          if (proceso.invalid !== null && proceso.invalid !== undefined) celda.append(el("div", proceso.invalid, "descripcion"));
+          tr.append(
+            celda,
+            el("td", String(proceso.steps), "id"),
+            el("td", (proceso.params ?? []).join(", ") || "—", "descripcion"),
+            el("td", (proceso.gates ?? []).join(", ") || "—", "descripcion"),
+            el("td", proceso.path, "ruta"),
+          );
+          return tr;
+        });
+        mas.append(procesosTabla(["Proceso", "Pasos", "Parámetros", "Gates", "Archivo"], filas));
+        return mas;
+      }
+
+      async function vistaProcesos() {
+        const cont = $("contenido");
+        cont.textContent = "";
+        const datos = await api("GET", "/api/processes");
+        const procesos = Array.isArray(datos.processes) ? datos.processes : [];
+        const corridas = Array.isArray(datos.runs) ? datos.runs : [];
+
+        const pagina = el("div", undefined, "proc");
+        const titulos = el("div", undefined, "proc-titulos");
+        const migas = el("div", "En vivo ", "proc-migas");
+        migas.append(el("span", "· Procesos"));
+        titulos.append(
+          migas,
+          el("h1", "Procesos: despliegues y tareas de varias etapas"),
+          el(
+            "p",
+            "Primero lo que está detenido esperándote; después cada proceso con sus pasos. Los pasos en ámbar los aprueba una persona.",
+            "proc-bajada",
+          ),
+        );
+        pagina.append(titulos);
+        cont.append(pagina);
+
+        if (procesosAviso !== null) {
+          const aviso = el("p", procesosAviso, "proc-nota proc-ok");
+          aviso.setAttribute("role", "status");
+          pagina.append(aviso);
+          procesosAviso = null;
+        }
+
+        if (procesos.length === 0) {
+          const vacio = el("div", undefined, "vacio");
+          vacio.append(
+            el("div", "No hay procesos declarados."),
+            el("div", "Un proceso es un paso a paso encadenable: desplegar, actualizar manuales, publicar.", "resultado"),
+            el("div", "Viven en .valmen/processes/\x3cid>.yaml", "ruta"),
+          );
+          pagina.append(vacio);
+          return;
+        }
+
+        // ── Lo detenido primero (R-VIVO-003) ──
+        const detenidas = corridas.filter((corrida) => corrida.status === "waiting");
+        if (detenidas.length === 0) {
+          pagina.append(el("p", "Nada detenido: ninguna corrida espera tu aprobación.", "proc-nota proc-nada"));
+        }
+        for (const corrida of detenidas) {
+          const proceso = procesos.find((p) => p.id === corrida.processId);
+          pagina.append(procesosBloqueDetenida(corrida, proceso));
+        }
+
+        // ── Procesos del proyecto ──
+        const seccion = el("section", undefined, "proc-seccion");
+        seccion.append(el("h2", "Procesos del proyecto", "proc-h2"));
+        const rejilla = el("div", undefined, "proc-tarjetas");
+        for (const proceso of procesos) rejilla.append(procesosTarjeta(proceso, corridas));
+        seccion.append(rejilla);
+        pagina.append(seccion, procesosMasDetalle(datos));
       }
 
       // ── Vista: portafolio ─────────────────────────────────────────────────
@@ -10396,196 +11100,6 @@
           }
           void navegar({ conservarVista: true });
         }, REFRESCO_DE_CORRIDA_MS);
-      }
-
-      async function vistaProcesos() {
-        const cont = $("contenido");
-        cont.textContent = "";
-
-        const datos = await api("GET", "/api/processes");
-        const r = datos.summary;
-
-        const tarjetas = el("div", undefined, "tarjetas");
-        const metricas = [
-          ["Procesos", r.processes],
-          ["Detenidos", r.waiting],
-          ["Gates sin aprobar", r.gatesPending],
-          ["Corridas", r.runs],
-        ];
-        if (r.invalid > 0) metricas.push(["Inválidos", r.invalid]);
-        for (const [rotulo, valor] of metricas) {
-          const tarjeta = el("div", undefined, "tarjeta");
-          tarjeta.append(el("div", String(valor), "valor"), el("div", rotulo, "rotulo"));
-          tarjetas.append(tarjeta);
-        }
-        cont.append(tarjetas);
-
-        // El responsable, para poder aprobar. Mismo campo y misma memoria que en la
-        // vista de un ticket: es la misma persona decidiendo.
-        const barraResponsable = el("div", undefined, "responsable");
-        const etiquetaResponsable = el("label", "Responsable de las aprobaciones");
-        etiquetaResponsable.htmlFor = "responsable-procesos";
-        const entradaResponsable = document.createElement("input");
-        entradaResponsable.type = "text";
-        entradaResponsable.id = "responsable-procesos";
-        entradaResponsable.placeholder = "Tu nombre";
-        entradaResponsable.value = responsable;
-        entradaResponsable.style.maxWidth = "260px";
-        entradaResponsable.addEventListener("change", () =>
-          guardarResponsable(entradaResponsable.value),
-        );
-        barraResponsable.append(
-          etiquetaResponsable,
-          entradaResponsable,
-          el("span", "Queda registrado con cada aprobación.", "resultado"),
-        );
-        cont.append(barraResponsable);
-
-        if (datos.processes.length === 0) {
-          const vacio = el("div", undefined, "vacio");
-          vacio.append(
-            el("div", "No hay procesos declarados."),
-            el(
-              "div",
-              "Un proceso es un paso a paso encadenable: desplegar, actualizar manuales, publicar.",
-              "resultado",
-            ),
-            el("div", "Viven en .valmen/processes/<id>.yaml", "ruta"),
-          );
-          cont.append(vacio);
-          return;
-        }
-
-        // ── Gates: lo que espera una decisión ──
-        if (datos.gates.length > 0) {
-          cont.append(el("h2", "Gates de proceso"));
-          const tabla = el("table");
-          const thead = el("thead");
-          const fila = el("tr");
-          for (const columna of ["Gate", "Proceso", "Estado", "Aprobado por", ""]) {
-            fila.append(el("th", columna));
-          }
-          thead.append(fila);
-
-          const tbody = el("tbody");
-          for (const gate of datos.gates) {
-            const tr = el("tr");
-
-            const celda = el("td");
-            celda.append(el("div", gate.gate, "nombre"));
-            if (gate.reason) celda.append(el("div", gate.reason, "descripcion"));
-            tr.append(celda);
-
-            tr.append(el("td", gate.processId, "id"));
-
-            const celdaEstado = el("td");
-            if (gate.approvedBy === null) {
-              celdaEstado.append(el("span", "sin aprobar", "etiqueta critico"));
-            } else {
-              celdaEstado.append(el("span", "aprobado", "etiqueta aprueba"));
-            }
-            tr.append(celdaEstado);
-
-            tr.append(el("td", gate.approvedBy ?? "—", "descripcion"));
-
-            const celdaAcciones = el("td");
-            const salida = el("div", "resultado");
-            if (gate.approvedBy === null) {
-              const boton = el("button", "Aprobar");
-              boton.addEventListener(
-                "click",
-                () => void aprobarGate(gate.gate, boton, salida),
-              );
-              celdaAcciones.append(boton, salida);
-            }
-            tr.append(celdaAcciones);
-
-            tbody.append(tr);
-          }
-          tabla.append(thead, tbody);
-          cont.append(tabla);
-        }
-
-        // ── Corridas: las detenidas primero ──
-        cont.append(el("h2", "Corridas"));
-        if (datos.runs.length === 0) {
-          cont.append(el("div", "Ninguna corrida registrada todavía.", "resultado"));
-        } else {
-          const tabla = el("table");
-          const thead = el("thead");
-          const fila = el("tr");
-          for (const columna of ["Corrida", "Proceso", "Estado", "Pasos", "Actualizada"]) {
-            fila.append(el("th", columna));
-          }
-          thead.append(fila);
-
-          const tbody = el("tbody");
-          for (const corrida of datos.runs) {
-            const tr = el("tr", undefined, corrida.status === "waiting" ? "planeado" : "");
-
-            const celda = el("td");
-            celda.append(el("div", corrida.runId, "id"));
-            if (corrida.pendingStep !== null) {
-              celda.append(el("div", `esperando en ${corrida.pendingStep}`, "descripcion"));
-            } else if (corrida.reason !== null) {
-              celda.append(el("div", corrida.reason, "descripcion"));
-            }
-            tr.append(celda);
-
-            tr.append(el("td", corrida.processId, "id"));
-
-            const celdaEstado = el("td");
-            const CLASE = {
-              waiting: "critico",
-              failed: "roto",
-              completed: "aprueba",
-              abandoned: "",
-            };
-            celdaEstado.append(
-              el("span", corrida.status, `etiqueta ${CLASE[corrida.status] ?? ""}`),
-            );
-            tr.append(celdaEstado);
-
-            const hechos = corrida.steps.filter((paso) => paso.status === "ok").length;
-            tr.append(el("td", `${hechos}/${corrida.steps.length}`, "id"));
-            tr.append(el("td", corrida.updatedAt.slice(0, 19).replace("T", " "), "id"));
-
-            tbody.append(tr);
-          }
-          tabla.append(thead, tbody);
-          cont.append(tabla);
-        }
-
-        // ── Procesos declarados ──
-        cont.append(el("h2", "Procesos"));
-        const tabla = el("table");
-        const thead = el("thead");
-        const fila = el("tr");
-        for (const columna of ["Proceso", "Pasos", "Parámetros", "Gates", "Archivo"]) {
-          fila.append(el("th", columna));
-        }
-        thead.append(fila);
-
-        const tbody = el("tbody");
-        for (const proceso of datos.processes) {
-          const tr = el("tr");
-
-          const celda = el("td");
-          celda.append(el("div", proceso.title, "nombre"), el("div", proceso.id, "id"));
-          if (proceso.invalid !== null) {
-            celda.append(el("div", proceso.invalid, "descripcion"));
-          }
-          tr.append(celda);
-
-          tr.append(el("td", String(proceso.steps), "id"));
-          tr.append(el("td", proceso.params.join(", ") || "—", "descripcion"));
-          tr.append(el("td", proceso.gates.join(", ") || "—", "descripcion"));
-          tr.append(el("td", proceso.path, "ruta"));
-
-          tbody.append(tr);
-        }
-        tabla.append(thead, tbody);
-        cont.append(tabla);
       }
 
       // ── «Pedir un cambio»: el chat de configuración ───────────────────────
