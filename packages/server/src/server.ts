@@ -200,9 +200,12 @@ export interface ServerContext {
    */
   readonly jev?: NonNullable<Parameters<typeof runTicketGate>[3]>["jev"];
   readonly judge?: NonNullable<Parameters<typeof runTicketGate>[3]>["judge"];
-  /** Módulos estáticos a servir, por ruta. */
+  /**
+   * Módulos estáticos a servir, por ruta. El cuerpo es texto, salvo el de un
+   * archivo binario (una fuente), que viaja como bytes para no corromperse.
+   */
   readonly statics?: Readonly<
-    Record<string, { readonly body: string; readonly type: string }>
+    Record<string, { readonly body: string | Uint8Array; readonly type: string }>
   >;
 }
 
@@ -2114,7 +2117,14 @@ const MIME: Readonly<Record<string, string>> = {
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".woff2": "font/woff2",
 };
+
+/**
+ * Extensiones que se leen y se envían como bytes. Un `woff2` leído como UTF-8
+ * cambia cada secuencia inválida por U+FFFD y el navegador descarta la fuente.
+ */
+const BINARIOS: ReadonlySet<string> = new Set([".woff2"]);
 
 /** Sirve un archivo estático, o `null` si no corresponde. */
 function serveStatic(path: string, context: ServerContext): ApiResponse | null {
@@ -2452,7 +2462,7 @@ async function handleRequest(
 
     const estatico = serveStatic(url.pathname, context);
     if (estatico !== null) {
-      const payload = estatico.body as { body: string; type: string };
+      const payload = estatico.body as { body: string | Uint8Array; type: string };
       send(response, 200, payload.body, payload.type, true);
       return;
     }
@@ -2478,7 +2488,11 @@ function send(
   raw = false,
 ): void {
   const texto =
-    raw || typeof body === "string" ? String(body) : JSON.stringify(body, null, 2);
+    body instanceof Uint8Array
+      ? body
+      : raw || typeof body === "string"
+        ? String(body)
+        : JSON.stringify(body, null, 2);
   response.writeHead(status, {
     "Content-Type": type,
     // Una herramienta local no debe ser embebible ni filtrable por un tercero.
@@ -2504,16 +2518,33 @@ export const ARCHIVOS_WEB: readonly string[] = [
   "agentes/mundos/invernadero.js",
 ];
 
+/**
+ * Las fuentes del tema (FEATURE-WEB-TEMA-TOKENS-20261014): subconjunto latino de
+ * `@fontsource` 5.3.0, licencia SIL OFL 1.1 (`fuentes/OFL.txt`). Van aparte de
+ * `ARCHIVOS_WEB` porque son binarias y porque esa lista la fija una prueba.
+ */
+export const ARCHIVOS_FUENTES: readonly string[] = [
+  "fuentes/chakra-petch-latin-500-normal.woff2",
+  "fuentes/chakra-petch-latin-600-normal.woff2",
+  "fuentes/chakra-petch-latin-700-normal.woff2",
+  "fuentes/ibm-plex-sans-latin-400-normal.woff2",
+  "fuentes/ibm-plex-sans-latin-500-normal.woff2",
+  "fuentes/ibm-plex-sans-latin-600-normal.woff2",
+  "fuentes/ibm-plex-mono-latin-400-normal.woff2",
+  "fuentes/ibm-plex-mono-latin-500-normal.woff2",
+  "fuentes/ibm-plex-mono-latin-600-normal.woff2",
+];
+
 /** Carga los estáticos desde un directorio, para el servidor real. */
 export function loadStatics(
   directory: string,
   files: readonly string[],
-): Readonly<Record<string, { body: string; type: string }>> {
-  const mapa: Record<string, { body: string; type: string }> = {};
+): Readonly<Record<string, { body: string | Uint8Array; type: string }>> {
+  const mapa: Record<string, { body: string | Uint8Array; type: string }> = {};
   for (const archivo of files) {
     const ruta = `${directory}/${archivo}`;
     mapa[archivo] = {
-      body: readFileSync(ruta, "utf8"),
+      body: BINARIOS.has(extname(archivo)) ? readFileSync(ruta) : readFileSync(ruta, "utf8"),
       type: MIME[extname(archivo)] ?? "application/octet-stream",
     };
   }
