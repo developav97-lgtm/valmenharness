@@ -8,28 +8,106 @@
       /* Sin framework y sin paso de compilación: esta interfaz tiene que
          arrancar con el servidor, y su objetivo es mostrar el estado, no
          impresionar. Una hoja propia se lee entera en un minuto. */
+      /* Las fuentes del tema viajan con el servidor (`fuentes/`, subconjunto
+         latino de @fontsource 5.3.0, licencia SIL OFL 1.1 en `fuentes/OFL.txt`):
+         Mission Control corre en local y puede no tener red, y cargarlas de un
+         tercero le contaría cada visita. Sin ellas quedan las pilas del sistema. */
+      @font-face {
+        font-family: "Chakra Petch";
+        font-weight: 500;
+        font-display: swap;
+        src: url("fuentes/chakra-petch-latin-500-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Chakra Petch";
+        font-weight: 600;
+        font-display: swap;
+        src: url("fuentes/chakra-petch-latin-600-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Chakra Petch";
+        font-weight: 700;
+        font-display: swap;
+        src: url("fuentes/chakra-petch-latin-700-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans";
+        font-weight: 400;
+        font-display: swap;
+        src: url("fuentes/ibm-plex-sans-latin-400-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans";
+        font-weight: 500;
+        font-display: swap;
+        src: url("fuentes/ibm-plex-sans-latin-500-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Sans";
+        font-weight: 600;
+        font-display: swap;
+        src: url("fuentes/ibm-plex-sans-latin-600-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Mono";
+        font-weight: 400;
+        font-display: swap;
+        src: url("fuentes/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Mono";
+        font-weight: 500;
+        font-display: swap;
+        src: url("fuentes/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "IBM Plex Mono";
+        font-weight: 600;
+        font-display: swap;
+        src: url("fuentes/ibm-plex-mono-latin-600-normal.woff2") format("woff2");
+      }
+      /* El tema «sala de control» (design.md del rediseño, Decisión 3). Cada
+         acento tiene un significado fijo: ámbar decide una persona, cian decide
+         el código, lila trabaja un modelo, verde hecho, rojo negado. Los nombres
+         de siempre (--panel, --acento, --alerta…) se conservan con los valores
+         nuevos porque todas las vistas los consumen; los nombres del tema son
+         alias del mismo valor. --tenue es el «atenuado» de la tabla: el «tenue»
+         no llega a AA como texto y queda en --tenue-deco, solo para decoración. */
       :root {
-        --fondo: #0d1014;
-        --panel: #14181f;
-        --panel-alto: #1b202a;
-        --panel-hover: #212733;
-        --borde: #262c38;
-        --borde-suave: #1e232d;
-        --texto: #e8eaf0;
-        --tenue: #8a92a6;
-        --acento: #5b8dff;
-        --acento-suave: rgba(91, 141, 255, 0.14);
-        --acento-halo: rgba(91, 141, 255, 0.07);
-        --acento-2: #8f6bff;
-        --halo-ok: 0 0 0 3px rgba(70, 185, 90, 0.14);
-        --alerta-suave: rgba(214, 160, 34, 0.16);
-        --ok-suave: rgba(70, 185, 90, 0.16);
-        --error-suave: rgba(242, 105, 92, 0.16);
-        --barra: rgba(13, 16, 20, 0.86);
-        --ok: #46b95a;
-        --alerta: #d6a022;
-        --error: #f2695c;
-        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+        --fondo: #0a1114;
+        --fondo-2: #0e181c;
+        --panel: #122027;
+        --panel-alto: #172a32;
+        --panel-hover: #1d343d;
+        --borde: #24383f;
+        --borde-suave: #1b2d33;
+        --texto: #e8f0f2;
+        --tenue: #9aaeb4;
+        --tenue-deco: #5f767d;
+        --acento: #4cc8e6;
+        --codigo: #4cc8e6;
+        --acento-suave: rgba(76, 200, 230, 0.12);
+        --acento-halo: rgba(76, 200, 230, 0.07);
+        --acento-2: #ad9ff4;
+        --modelo: #ad9ff4;
+        --modelo-suave: rgba(173, 159, 244, 0.12);
+        --halo-ok: 0 0 0 3px rgba(98, 214, 158, 0.15);
+        --alerta-suave: rgba(242, 180, 63, 0.12);
+        --ok-suave: rgba(98, 214, 158, 0.12);
+        --error-suave: rgba(243, 106, 93, 0.12);
+        --barra: rgba(14, 24, 28, 0.85);
+        --ok: #62d69e;
+        --hecho: #62d69e;
+        --alerta: #f2b43f;
+        --persona: #f2b43f;
+        --error: #f36a5d;
+        --negado: #f36a5d;
+        --cuadricula: rgba(120, 170, 185, 0.07);
+        --sobre-acento: #0a1114;
+        --velo: rgba(5, 10, 12, 0.6);
+        --fuente-titulo: "Chakra Petch", "IBM Plex Sans", system-ui, sans-serif;
+        --fuente-texto: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
         --lateral: 232px;
         --radio: 8px;
       }
@@ -39,26 +117,37 @@
          la misma jerarquía y los mismos estados que el oscuro. */
       @media (prefers-color-scheme: light) {
         :root {
-          --fondo: #f7f8fb;
+          --fondo: #f2f6f7;
+          --fondo-2: #e8eef0;
           --panel: #ffffff;
-          --panel-alto: #eef1f7;
-          --panel-hover: #e6ebf5;
-          --borde: #cfd6e4;
-          --borde-suave: #e1e5ed;
-          --texto: #172033;
-          --tenue: #57627a;
-          --acento: #2f63d9;
-          --acento-suave: rgba(47, 99, 217, 0.14);
-          --acento-halo: rgba(47, 99, 217, 0.08);
-          --acento-2: #7050d7;
-          --halo-ok: 0 0 0 3px rgba(22, 128, 58, 0.15);
-          --alerta-suave: rgba(146, 95, 0, 0.14);
-          --ok-suave: rgba(22, 128, 58, 0.14);
-          --error-suave: rgba(200, 58, 49, 0.12);
-          --barra: rgba(247, 248, 251, 0.88);
-          --ok: #16803a;
-          --alerta: #925f00;
-          --error: #c83a31;
+          --panel-alto: #f4f8f9;
+          --panel-hover: #e8eef0;
+          --borde: #c9d6da;
+          --borde-suave: #dde6e9;
+          --texto: #0d1a1f;
+          --tenue: #4a5f66;
+          --tenue-deco: #7d9198;
+          --acento: #0a7898;
+          --codigo: #0a7898;
+          --acento-suave: rgba(10, 120, 152, 0.12);
+          --acento-halo: rgba(10, 120, 152, 0.07);
+          --acento-2: #5a45c4;
+          --modelo: #5a45c4;
+          --modelo-suave: rgba(90, 69, 196, 0.12);
+          --halo-ok: 0 0 0 3px rgba(27, 127, 77, 0.15);
+          --alerta-suave: rgba(154, 97, 0, 0.12);
+          --ok-suave: rgba(27, 127, 77, 0.12);
+          --error-suave: rgba(191, 51, 38, 0.12);
+          --barra: rgba(242, 246, 247, 0.88);
+          --ok: #1b7f4d;
+          --hecho: #1b7f4d;
+          --alerta: #9a6100;
+          --persona: #9a6100;
+          --error: #bf3326;
+          --negado: #bf3326;
+          --cuadricula: rgba(20, 70, 90, 0.06);
+          --sobre-acento: #ffffff;
+          --velo: rgba(13, 26, 31, 0.35);
         }
       }
       * {
@@ -76,15 +165,19 @@
         outline: 2px solid var(--acento);
         outline-offset: 2px;
       }
+      /* El fondo de sala de control: una cuadrícula de 40 px sobre el fondo, fija
+         para que no se mueva con el contenido. */
       body {
         margin: 0;
-        background: var(--fondo);
+        background:
+          linear-gradient(var(--cuadricula) 1px, transparent 1px) 0 0 / 40px 40px fixed,
+          linear-gradient(90deg, var(--cuadricula) 1px, transparent 1px) 0 0 / 40px 40px fixed,
+          var(--fondo);
         color: var(--texto);
-        font:
-          15px/1.5 system-ui,
-          -apple-system,
-          "Segoe UI",
-          sans-serif;
+        font: 15px/1.5 var(--fuente-texto);
+      }
+      h1, h2, h3 {
+        font-family: var(--fuente-titulo);
       }
       /* ── El armazón ──────────────────────────────────────────────────────
          Barra lateral fija y una columna de contenido. La navegación deja de
@@ -501,7 +594,7 @@
       button.principal {
         background: var(--acento);
         border-color: var(--acento);
-        color: #fff;
+        color: var(--sobre-acento);
       }
       button.peligro:hover:not(:disabled) {
         border-color: var(--error);
@@ -759,7 +852,7 @@
         width: calc(100% - 32px);
       }
       dialog::backdrop {
-        background: rgba(0, 0, 0, 0.6);
+        background: var(--velo);
       }
       .dialogo {
         padding: 20px 24px;
@@ -1142,7 +1235,7 @@
         flex: 1 1 320px;
       }
       .obsoleto {
-        background: rgba(210, 153, 34, 0.12);
+        background: var(--alerta-suave);
         border: 1px solid var(--alerta);
         color: var(--alerta);
         border-radius: 6px;
@@ -1723,7 +1816,7 @@
         min-width: 150px;
       }
       .correccion {
-        background: rgba(210, 153, 34, 0.12);
+        background: var(--alerta-suave);
         border: 1px solid var(--alerta);
         border-radius: 8px;
         padding: 12px 16px;
@@ -1999,11 +2092,11 @@
         word-break: break-word;
       }
       .diff .add {
-        background: rgba(63, 185, 80, 0.12);
+        background: var(--ok-suave);
         color: var(--ok);
       }
       .diff .remove {
-        background: rgba(248, 81, 73, 0.12);
+        background: var(--error-suave);
         color: var(--error);
       }
       .diff .same {
@@ -2214,7 +2307,7 @@
         font-style: italic;
       }
       .aviso-jev {
-        background: rgba(79, 140, 255, 0.1);
+        background: var(--acento-suave);
         border: 1px solid var(--acento);
         border-radius: 6px;
         padding: 10px 12px;
@@ -2222,7 +2315,7 @@
         margin: 14px 0;
       }
       .error-parser {
-        background: rgba(248, 81, 73, 0.12);
+        background: var(--error-suave);
         border: 1px solid var(--error);
         color: var(--error);
         border-radius: 6px;

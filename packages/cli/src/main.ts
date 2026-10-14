@@ -116,6 +116,7 @@ import {
   createMissionControl,
   defaultContext,
   esAnfitrionLocal,
+  ARCHIVOS_FUENTES,
   ARCHIVOS_WEB,
   loadStatics,
   recordHumanDecision,
@@ -1639,7 +1640,7 @@ export async function run(argv: readonly string[]): Promise<number> {
       const raizWeb = join(dirname(fileURLToPath(import.meta.url)), "web");
       let statics: ServerContext["statics"];
       try {
-        statics = loadStatics(raizWeb, ARCHIVOS_WEB);
+        statics = loadStatics(raizWeb, [...ARCHIVOS_WEB, ...ARCHIVOS_FUENTES]);
       } catch {
         // El error crudo de `loadStatics` habla de rutas; este dice qué hacer. Se
         // descarta a propósito, y por eso el `catch` no liga la excepción.
