@@ -324,6 +324,15 @@ Sin publicar todavía.
     "action": "ticket-transition",
     "actor": "cli",
     "details": "Workflow: in_progress -> awaiting_user_tests."
+  },
+  {
+    "kind": "ticket-event",
+    "id": "EVENT-013",
+    "date": "2026-10-14",
+    "at": "2026-10-14T19:52:33.481Z",
+    "action": "delivery-size",
+    "actor": "cli",
+    "details": "{\"añadidas\":439,\"borradas\":82,\"total\":521,\"tope\":600,\"pasaElTope\":false,\"via\":\"worktree\"}"
   }
 ]
 ```
