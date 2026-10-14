@@ -15,9 +15,27 @@ import {
   gateApproved,
   listRuns,
   loadProcesses,
+  readRequiredPhrase,
   readRun,
   waitingRuns,
 } from "@valmen/engine";
+
+/** Un paso de un proceso, para pintarlo (R-VIVO-003). */
+export interface ProcessStepRow {
+  readonly id: string;
+  readonly title: string;
+  readonly kind: string;
+  /** El gate que espera, solo en un paso `kind: gate`; si no, `null`. */
+  readonly gate: string | null;
+}
+
+/** Un parámetro de un proceso, con la descripción que la pantalla muestra en «Pide: …». */
+export interface ProcessParamRow {
+  readonly name: string;
+  readonly required: boolean;
+  readonly description: string | null;
+  readonly default: string | null;
+}
 
 /** Un proceso, para la lista. */
 export interface ProcessRow {
@@ -34,6 +52,10 @@ export interface ProcessRow {
   readonly invalid: string | null;
   /** Ruta relativa del archivo, para el enlace. */
   readonly path: string;
+  /** Los pasos en orden, con su tipo. Aditivo: `steps` sigue siendo la cuenta. */
+  readonly stepList: readonly ProcessStepRow[];
+  /** Los parámetros con su descripción. Aditivo: `params` sigue con los nombres. */
+  readonly paramList: readonly ProcessParamRow[];
 }
 
 /** Una corrida, para la lista. */
@@ -49,8 +71,16 @@ export interface RunRow {
     readonly id: string;
     readonly status: string;
     readonly at: string;
+    /** El comando ya sustituido que corrió el paso. */
+    readonly detail: string;
   }[];
   readonly params: Readonly<Record<string, string>>;
+  /** El gate del paso donde se detuvo, si ese paso es `kind: gate`. */
+  readonly pendingGate: string | null;
+  /** La frase exacta que ese gate exige para esta corrida, o `null` si no exige frase. */
+  readonly requiredPhrase: string | null;
+  /** Quién aprobó ese gate **para esta corrida**, o `null` si nadie todavía. */
+  readonly gateApprovedBy: string | null;
 }
 
 /** Un gate de proceso, con si está aprobado y por quién. */
@@ -60,6 +90,23 @@ export interface GateRow {
   readonly approvedBy: string | null;
   readonly approvedAt: string | null;
   readonly reason: string | null;
+  /** `true` si el gate exige frase: entonces solo se aprueba para una corrida detenida. */
+  readonly requiresPhrase: boolean;
+}
+
+/**
+ * La frase de un gate con los parámetros de la corrida, **solo para mostrarla**.
+ *
+ * Quien valida es `approveGate`, que falla si falta un parámetro; aquí uno que falta deja
+ * `{nombre}` a la vista en vez de romper la lista entera.
+ */
+export function processPhraseFor(
+  plantilla: string,
+  params: Readonly<Record<string, string>>,
+): string {
+  return plantilla.replace(/\{(\w+)\}/g, (entera, nombre: string) =>
+    Object.hasOwn(params, nombre) ? (params[nombre] as string) : entera,
+  );
 }
 
 /** Lista los procesos del proyecto, con lo que hace falta para operarlos. */
@@ -93,6 +140,24 @@ export function listProcessRows(root: string): ProcessRow[] {
         ).length,
         invalid: cargado.invalid,
         path: cargado.path,
+        stepList:
+          cargado.invalid !== null
+            ? []
+            : definition.steps.map((paso) => ({
+                id: paso.id,
+                title: paso.title,
+                kind: paso.kind,
+                gate: paso.kind === "gate" ? paso.target : null,
+              })),
+        paramList:
+          cargado.invalid !== null
+            ? []
+            : definition.params.map((param) => ({
+                name: param.name,
+                required: param.required,
+                description: param.description,
+                default: param.default,
+              })),
       };
     })
     .sort((a, b) => {
@@ -106,6 +171,16 @@ export function listProcessRows(root: string): ProcessRow[] {
 
 /** Las corridas, con las detenidas primero. */
 export function listRunRows(root: string): RunRow[] {
+  // El gate de cada paso, por proceso: la corrida guarda el id del paso, no el gate.
+  const gatesPorPaso = new Map<string, string>();
+  for (const cargado of loadProcesses(root)) {
+    if (cargado.invalid !== null) continue;
+    for (const paso of cargado.definition.steps) {
+      if (paso.kind === "gate" && paso.target !== null) {
+        gatesPorPaso.set(`${cargado.definition.id}/${paso.id}`, paso.target);
+      }
+    }
+  }
   return [...listRuns(root)]
     .sort((a, b) => {
       if ((a.status === "waiting") !== (b.status === "waiting")) {
@@ -113,21 +188,38 @@ export function listRunRows(root: string): RunRow[] {
       }
       return a.updatedAt < b.updatedAt ? 1 : -1;
     })
-    .map((corrida) => ({
-      runId: corrida.runId,
-      processId: corrida.processId,
-      status: corrida.status,
-      pendingStep: corrida.pendingStep,
-      reason: corrida.reason,
-      startedAt: corrida.startedAt,
-      updatedAt: corrida.updatedAt,
-      steps: corrida.steps.map((paso) => ({
-        id: paso.id,
-        status: paso.status,
-        at: paso.at,
-      })),
-      params: corrida.params,
-    }));
+    .map((corrida) => {
+      const pendingGate =
+        corrida.pendingStep === null
+          ? null
+          : (gatesPorPaso.get(`${corrida.processId}/${corrida.pendingStep}`) ?? null);
+      const frase = pendingGate === null ? null : readRequiredPhrase(root, pendingGate);
+      return {
+        runId: corrida.runId,
+        processId: corrida.processId,
+        status: corrida.status,
+        pendingStep: corrida.pendingStep,
+        reason: corrida.reason,
+        startedAt: corrida.startedAt,
+        updatedAt: corrida.updatedAt,
+        steps: corrida.steps.map((paso) => ({
+          id: paso.id,
+          status: paso.status,
+          at: paso.at,
+          detail: paso.detail,
+        })),
+        params: corrida.params,
+        pendingGate,
+        requiredPhrase: frase === null ? null : processPhraseFor(frase, corrida.params),
+        gateApprovedBy:
+          pendingGate === null || corrida.status !== "waiting"
+            ? null
+            : (gateApproved(root, pendingGate, {
+                runId: corrida.runId,
+                params: corrida.params,
+              })?.actor ?? null),
+      };
+    });
 }
 
 /**
@@ -151,6 +243,7 @@ export function listGateRows(root: string): GateRow[] {
         approvedBy: aprobacion?.actor ?? null,
         approvedAt: aprobacion?.at ?? null,
         reason: aprobacion?.reason ?? null,
+        requiresPhrase: readRequiredPhrase(root, paso.target) !== null,
       });
     }
   }
