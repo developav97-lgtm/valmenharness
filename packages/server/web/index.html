@@ -8198,16 +8198,16 @@
       }
 
       /**
-       * La query del rango. «Este mes» no lleva fechas: el mes lo decide el servidor.
+       * La consulta del rango, sin el `?`. «Este mes» no lleva fechas: el mes lo decide el servidor.
        * «Todo» empieza en 2000-01-01 porque el endpoint exige fechas válidas (D-002).
        */
       function portafolioFechasDe(rango, hoy = new Date()) {
         if (rango === "mes") return "";
         const hasta = portafolioDia(hoy);
-        if (rango === "todo") return `?desde=2000-01-01&hasta=${hasta}`;
+        if (rango === "todo") return `desde=2000-01-01&hasta=${hasta}`;
         const desde = new Date(hoy);
         desde.setDate(desde.getDate() - 6);
-        return `?desde=${portafolioDia(desde)}&hasta=${hasta}`;
+        return `desde=${portafolioDia(desde)}&hasta=${hasta}`;
       }
 
       /** US$ con dos decimales y coma decimal, como el boceto. */
@@ -8316,7 +8316,8 @@
         const cont = $("contenido");
         cont.textContent = "Cargando portafolio…";
         const rango = portafolioRangoElegido();
-        const datos = await api("GET", `/api/portafolio${portafolioFechasDe(rango)}`);
+        // La misma ruta que usa el selector del menú, con la consulta del rango.
+        const datos = await api("GET", "/api/portafolio?" + portafolioFechasDe(rango));
         cont.textContent = "";
         const pagina = el("div", undefined, "port");
 
